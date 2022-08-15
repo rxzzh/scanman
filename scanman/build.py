@@ -25,9 +25,7 @@ class DocHandler:
           cells=cells[i*COLUMNS:(i+1)*COLUMNS], fields=records[i])
     doc.save(filename)
 
-
 doc_handler = DocHandler()
-
 
 def prefix_id(records):
   i = 1
@@ -44,7 +42,6 @@ zh_map = {'low': '低', 'middle': '中', 'high': '高'}
 
 
 def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
-  pass
   vulnerabilities.sort(key=lambda x: num_map[x.severity],reverse=True)
   hashtable_ip2host = {}
   for host in hosts:
@@ -62,3 +59,19 @@ def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="
     records.append(record)
   records = prefix_id(records)
   doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2.docx", filename=filename)
+
+def build_table_djcp(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
+  vulnerabilities.sort(key=lambda x: num_map[x.severity], reverse=True)
+  records = []
+  for vul in vulnerabilities:
+    record = []
+    record.append(vul.name)
+    record.append(', '.join(affections[vul.name]))
+    record.append(zh_map[vul.severity])
+    records.append(record)
+  records = prefix_id(records)
+  doc_handler.build_doc_tablelike(
+    records=records,
+    template_path="static/template-vulnlist.docx",
+    filename=filename
+  )

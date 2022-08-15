@@ -1,26 +1,27 @@
 from lxml import etree
-
-from tqdm import tqdm
-from rich import print as pprint
 from .model import Vulnerability, Host
-from openpyxl import Workbook, load_workbook
+from openpyxl import load_workbook
 
-class RSASParser:
+class Parser:
   def __init__(self) -> None:
     pass
-
+ 
   def clean(self, text: str):
     ret = text
     bad_tokens = ['\n','\t',' ']
     for token in bad_tokens:
       ret = ret.replace(token, "")
     return ret
-    
-
+  
   def parse_vulnerability(self, text):
     pass
-    root = etree.HTML(text)
 
+  def parse_host(self, text):
+    pass
+
+class RSASParser(Parser):
+  def parse_vulnerability(self, text):
+    root = etree.HTML(text)
 
     vuln_names = root.xpath(
         '//*[@id="vul_detail"]/table/tr/td/span/text()')
@@ -38,7 +39,6 @@ class RSASParser:
     vuln_solution = ["".join(node.itertext()) for node in nodes]
     vuln_solution = list(map(self.clean, vuln_solution))
 
-
     fields = [vuln_names, vuln_threat, vuln_solution, vuln_desc]
     assert(any(len(field) == len(fields[0]) for field in fields))
 
@@ -52,7 +52,6 @@ class RSASParser:
         solution=vuln_solution[i]
       ))
     return ret
-
   
   def parse_host(self, text):
     root = etree.HTML(text)
@@ -62,6 +61,13 @@ class RSASParser:
         '//*[@id="vul_detail"]/table/tr/td/span/text()')
     vuln_names = list(map(str.strip, vuln_names))
     return Host(ip=host_ip), vuln_names
+
+class TRXParser(Parser):
+  def parse_vulnerability(self, text):
+    return super().parse_vulnerability(text)
+  
+  def parse_host(self, text):
+    return super().parse_host(text)
 
 class XLSXParser:
   def __init__(self) -> None:
@@ -89,13 +95,3 @@ class XLSXParser:
       ret[ip] = name
       row+=1
     return ret
-
-
-
-if __name__ == "__main__":
-  rp = RSASParser()
-  res = rp.parse_vulnerability(open("project/ahyd/hosts/172.16.0.27.html").read())
-  pprint(res)
-  res = rp.parse_host(open("project/ahyd/hosts/172.16.0.27.html").read())
-  pprint(res)
-    
