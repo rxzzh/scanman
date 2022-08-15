@@ -10,7 +10,7 @@
 2. cd scanman
 3. pip install -r requirements.txt
 4. ./scanman.py --help
-5. ./scanman.py -r /path/to/folder/host/
+5. ./scanman.py -b /path/to/folder/host/
 
 ## Disclaimer: ⚠
 
