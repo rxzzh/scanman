@@ -7,7 +7,7 @@
 ## Usage:
 
 1. git clone https://github.com/kuboRenka/scanman.git
-2. cd scanman:
+2. cd scanman
 3. pip install -r requirements.txt
 4. ./scanman.py --help
 5. ./scanman.py -r /path/to/folder/host/
