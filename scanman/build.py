@@ -20,7 +20,7 @@ class DocHandler:
     cells = table._cells
     cells = cells[HEAD_ROWS*COLUMNS:]
     # print(cells)
-    for i in tqdm(range(len(records))):
+    for i in range(len(records)):
       gadget_fill_cell_super(
           cells=cells[i*COLUMNS:(i+1)*COLUMNS], fields=records[i])
     doc.save(filename)
@@ -42,6 +42,7 @@ zh_map = {'low': '低', 'middle': '中', 'high': '高'}
 
 
 def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
+  print("building...")
   vulnerabilities.sort(key=lambda x: num_map[x.severity],reverse=True)
   hashtable_ip2host = {}
   for host in hosts:
@@ -59,6 +60,7 @@ def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="
     records.append(record)
   records = prefix_id(records)
   doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2.docx", filename=filename)
+  print("done!")
 
 def build_table_djcp(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
   vulnerabilities.sort(key=lambda x: num_map[x.severity], reverse=True)

@@ -2,22 +2,24 @@ from lxml import etree
 from .model import Vulnerability, Host
 from openpyxl import load_workbook
 
+
 class Parser:
   def __init__(self) -> None:
     pass
- 
+
   def clean(self, text: str):
     ret = text
-    bad_tokens = ['\n','\t',' ']
+    bad_tokens = ['\n', '\t', ' ']
     for token in bad_tokens:
       ret = ret.replace(token, "")
     return ret
-  
+
   def parse_vulnerability(self, text):
     pass
 
   def parse_host(self, text):
     pass
+
 
 class RSASParser(Parser):
   def parse_vulnerability(self, text):
@@ -40,39 +42,42 @@ class RSASParser(Parser):
     vuln_solution = list(map(self.clean, vuln_solution))
 
     fields = [vuln_names, vuln_threat, vuln_solution, vuln_desc]
-    assert(any(len(field) == len(fields[0]) for field in fields))
+    assert (any(len(field) == len(fields[0]) for field in fields))
 
     ret = []
 
     for i in range(len(vuln_names)):
       ret.append(Vulnerability(
-        name=vuln_names[i],
-        severity=vuln_threat[i],
-        description=vuln_desc[i],
-        solution=vuln_solution[i]
+          name=vuln_names[i],
+          severity=vuln_threat[i],
+          description=vuln_desc[i],
+          solution=vuln_solution[i]
       ))
     return ret
-  
+
   def parse_host(self, text):
     root = etree.HTML(text)
 
-    host_ip = root.xpath('//*[@id="content"]/div[2]/table[2]/tr/td[1]/table/tbody/tr[1]/td/text()')[0]
+    host_ip = root.xpath(
+        '//*[@id="content"]/div[2]/table[2]/tr/td[1]/table/tbody/tr[1]/td/text()')[0]
     vuln_names = root.xpath(
         '//*[@id="vul_detail"]/table/tr/td/span/text()')
     vuln_names = list(map(str.strip, vuln_names))
     return Host(ip=host_ip), vuln_names
 
+
 class TRXParser(Parser):
   def parse_vulnerability(self, text):
     return super().parse_vulnerability(text)
-  
+
   def parse_host(self, text):
     return super().parse_host(text)
+
 
 class XLSXParser:
   def __init__(self) -> None:
     pass
-  
+
   def read_host_name_ip(self, path):
     wb = load_workbook(path)
     ws = list(wb)[0]
@@ -93,5 +98,5 @@ class XLSXParser:
       ip = ws.cell(column=ip_col, row=row).value
       name = ws.cell(column=name_col, row=row).value
       ret[ip] = name
-      row+=1
+      row += 1
     return ret

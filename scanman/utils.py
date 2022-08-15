@@ -1,9 +1,9 @@
 from docx.enum.table import WD_ALIGN_VERTICAL
-import re
 from docx.shared import Cm
 from docx.enum.table import WD_ROW_HEIGHT_RULE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import os
+import re
 
 
 def html_names_of_path(path):

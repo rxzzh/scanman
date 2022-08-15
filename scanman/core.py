@@ -1,11 +1,9 @@
-from distutils.command.config import LANG_EXT
-from pprint import pprint
-
-from .model import Vulnerability
 from .utils import html_names_of_path
 from .read import RSASParser, XLSXParser, TRXParser
 from .build import build_table, build_table_djcp
 from tqdm import tqdm
+from tabulate import tabulate
+from rich import print as pprint
 
 class TableType:
   YPG = 0
@@ -59,10 +57,13 @@ class Prime:
     self.build()
   
   def summary(self):
-    print("vul count:", len(self.vulnerabilities))
-    print("high:", len(list(filter(lambda x: x.severity == "high", self.vulnerabilities))))
-    print("middle:", len(list(filter(lambda x: x.severity == "middle", self.vulnerabilities))))
-    print("low:", len(list(filter(lambda x: x.severity == "low", self.vulnerabilities))))
+    
+    total_count = len(self.vulnerabilities)
+    high_count =  len(list(filter(lambda x: x.severity == "high", self.vulnerabilities)))
+    middle_count = len(list(filter(lambda x: x.severity == "middle", self.vulnerabilities)))
+    low_count = len(list(filter(lambda x: x.severity == "low", self.vulnerabilities)))
+
+    print(tabulate([[low_count,middle_count,high_count,total_count]],headers=['低危','中危','高危','总数'], tablefmt="psql"))
 
     host_vul_count = {}
     vulnerability_map = {}
@@ -81,11 +82,13 @@ class Prime:
         highest = host_vul_count[count]['high']
     high_count = [0] * (highest+1)
     for count in host_vul_count:
-      if host_vul_count[count]['high'] > 15:
-        print(count)
       high_count[host_vul_count[count]['high']] += 1
     
-    print(high_count)
+    col_0 = range(len(high_count))
+    col_1 = high_count
+
+    print(tabulate([[col_0[i], col_1[i]] for i in range(len(high_count))], headers=['高危数','主机数'], tablefmt="psql"))
+
       
 
 
