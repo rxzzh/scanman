@@ -1,4 +1,4 @@
-from .utils import html_names_of_path
+from .utils import html_names_of_path, recursive_html_names_of_path
 from .read import RSASParser, XLSXParser, TRXParser
 from .build import build_table, build_table_djcp
 from tqdm import tqdm
@@ -29,6 +29,8 @@ class Prime:
     self.affections = {}
     self.table_type = None
     self.scanner_type = None
+    self.recursive_read = False
+    self.feed_html_path = html_names_of_path
 
   def set_html_path(self, path):
     self.html_path = path
@@ -44,6 +46,10 @@ class Prime:
 
   def set_scanner_type(self, scanner_type):
     self.scanner_type = scanner_type
+  
+  def set_recursive_read(self, recursive):
+    self.recursive_read = recursive
+    self.feed_html_path = recursive_html_names_of_path
 
   def run(self):
     if self.scanner_type == ScannerType.RSAS:
@@ -76,9 +82,9 @@ class Prime:
       )
 
   def read_vulnerabilities_from_html(self):
-    filenames = html_names_of_path(self.html_path)
+    filenames = self.feed_html_path(self.html_path)
     for name in tqdm(filenames):
-      with open(self.html_path+name) as f:
+      with open(name) as f:
         text = f.read()
       new_vuls = self.parser.parse_vulnerability(text)
       for vul in new_vuls:
@@ -86,18 +92,18 @@ class Prime:
           self.vulnerabilities.append(vul)
 
   def read_hosts_from_html(self):
-    filenames = html_names_of_path(self.html_path)
+    filenames = self.feed_html_path(self.html_path)
     for name in tqdm(filenames):
-      with open(self.html_path+name) as f:
+      with open(name) as f:
         text = f.read()
       new_host = self.parser.parse_host(text)[0]
       if new_host not in self.hosts:
         self.hosts.append(new_host)
 
   def read_affections_from_html(self):
-    filenames = html_names_of_path(self.html_path)
+    filenames = self.feed_html_path(self.html_path)
     for name in tqdm(filenames):
-      with open(self.html_path+name) as f:
+      with open(name) as f:
         text = f.read()
       host, affections = self.parser.parse_host(text)
       for vul in affections:

@@ -4,12 +4,26 @@ from docx.enum.table import WD_ROW_HEIGHT_RULE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import os
 import re
+ip_regex = re.compile('^([0-9]+\.){3}[0-9]+.html$')
+true_ip_regex = re.compile('^([0-9]+\.){3}[0-9]+$')
+
 
 
 def html_names_of_path(path):
+  path = path + '/' if not path.endwith('/') else path
   filenames = os.listdir(path)
   filenames = list(filter(lambda x: ".html" in x, filenames))
+  filenames = [path+_ for _ in filenames]
   return filenames
+
+def recursive_html_names_of_path(path):
+  ret = []
+  for current_dir, sub_dirs, file_names in os.walk(path):
+    for name in file_names:
+      if ip_regex.match(name):
+        ret.append(os.path.join(current_dir, name))
+  return ret
+
 
 
 def gadget_fill_cell(row, fields: list):
@@ -29,9 +43,6 @@ def gadget_fill_cell(row, fields: list):
 def doc_add_comment(doc, comment: str):
   doc.add_paragraph().text = comment
 
-
-ip_regex = re.compile('^([0-9]+\.){3}[0-9]+.html$')
-true_ip_regex = re.compile('^([0-9]+\.){3}[0-9]+$')
 
 
 def concat_path(path_head, path_tail):
