@@ -84,7 +84,7 @@ class Prime:
   def read_vulnerabilities_from_html(self):
     filenames = self.feed_html_path(self.html_path)
     for name in tqdm(filenames):
-      with open(name) as f:
+      with open(name, encoding='utf-8') as f:
         text = f.read()
       new_vuls = self.parser.parse_vulnerability(text)
       for vul in new_vuls:
@@ -94,7 +94,7 @@ class Prime:
   def read_hosts_from_html(self):
     filenames = self.feed_html_path(self.html_path)
     for name in tqdm(filenames):
-      with open(name) as f:
+      with open(name, encoding='utf-8') as f:
         text = f.read()
       new_host = self.parser.parse_host(text)[0]
       if new_host not in self.hosts:
@@ -103,7 +103,7 @@ class Prime:
   def read_affections_from_html(self):
     filenames = self.feed_html_path(self.html_path)
     for name in tqdm(filenames):
-      with open(name) as f:
+      with open(name, encoding='utf-8') as f:
         text = f.read()
       host, affections = self.parser.parse_host(text)
       for vul in affections:
