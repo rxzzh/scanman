@@ -19,7 +19,6 @@ class DocHandler:
     COLUMNS = len(new_row.cells)
     cells = table._cells
     cells = cells[HEAD_ROWS*COLUMNS:]
-    # print(cells)
     for i in range(len(records)):
       gadget_fill_cell_super(
           cells=cells[i*COLUMNS:(i+1)*COLUMNS], fields=records[i])

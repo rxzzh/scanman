@@ -166,6 +166,3 @@ class Prime:
 
     print(tabulate([[col_0[i], col_1[i]] for i in range(
         len(high_count))], headers=['高危数', '主机数'], tablefmt="psql"))
-
-    # for affection in self.affections:
-    # pprint((affection, len(self.affections[affection])))
