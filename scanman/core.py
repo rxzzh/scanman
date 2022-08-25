@@ -3,8 +3,6 @@ from .read import RSASParser, XLSXParser, TRXParser
 from .build import build_table, build_table_djcp
 from tqdm import tqdm
 from tabulate import tabulate
-from rich import print as pprint
-
 
 class TableType:
   YPG = 0
@@ -31,6 +29,7 @@ class Prime:
     self.scanner_type = None
     self.recursive_read = False
     self.feed_html_path = html_names_of_path
+    self.quiet = False
 
   def set_html_path(self, path):
     self.html_path = path
@@ -50,6 +49,9 @@ class Prime:
   def set_recursive_read(self, recursive):
     self.recursive_read = recursive
     self.feed_html_path = recursive_html_names_of_path
+  
+  def set_quiet(self, quiet):
+    self.quiet = quiet
 
   def run(self):
     if self.scanner_type == ScannerType.RSAS:
@@ -62,7 +64,8 @@ class Prime:
     self.read_hosts_names_from_xlsx()
     self.read_affections_from_html()
     self.padding_empty_fields()
-    self.summary()
+    if not self.quiet:
+      self.summary()
     self.build()
 
   def build(self):

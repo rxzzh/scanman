@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-from email.policy import default
 import click
 from scanman.core import Prime, ScannerType, TableType
 
@@ -12,7 +11,8 @@ from scanman.core import Prime, ScannerType, TableType
 @click.option('-x', '--xlsx_path', default='', help='漏扫目标信息的Excel表路径，表头必须包含ip和name字段')
 @click.option('-o', '--output_path', default='./out.docx', help='Word格式报告输出全路径')
 @click.option('-r', '--recursive/--no-recursive',  default=False, show_default=True, help="从html文件夹路径下递归地读取命名符合ip.html的文件")
-def cli(html_path, xlsx_path, output_path, table_type, scanner_type, recursive):
+@click.option('-q', '--quiet/--no-quiet', default=False, show_default=True, help="安静模式")
+def cli(html_path, xlsx_path, output_path, table_type, scanner_type, recursive, quiet):
   prime = Prime()
   prime.set_html_path(html_path)
   prime.set_xlsx_path(xlsx_path)
@@ -31,6 +31,7 @@ def cli(html_path, xlsx_path, output_path, table_type, scanner_type, recursive):
       "NESSUS": ScannerType.NESSUS
   }
   prime.set_scanner_type(scanner_type_mapping[scanner_type])
+  prime.set_quiet(quiet=quiet)
 
   prime.run()
 
