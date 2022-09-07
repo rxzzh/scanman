@@ -36,8 +36,8 @@ def prefix_id(records):
   return ret
 
 
-num_map = {'low': 0, 'middle': 1, 'high': 2}
-zh_map = {'low': '低', 'middle': '中', 'high': '高'}
+num_map = {'low': 0, 'middle': 1, 'high': 2, 'critical': 3}
+zh_map = {'low': '低', 'middle': '中', 'high': '高', 'critical':'危急'}
 
 
 def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):

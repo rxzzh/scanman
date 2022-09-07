@@ -1,5 +1,5 @@
-from .utils import html_names_of_path, recursive_html_names_of_path
-from .read import RSASParser, XLSXParser, TRXParser
+from .utils import html_names_of_path, recursive_html_names_of_path, recursive_xlsx_names_of_path
+from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser
 from .build import build_table, build_table_djcp
 from tqdm import tqdm
 from tabulate import tabulate
@@ -13,6 +13,7 @@ class ScannerType:
   RSAS = 0
   TRX = 1
   NESSUS = 2
+  XLSX = 3
 
 
 class Prime:
@@ -30,6 +31,12 @@ class Prime:
     self.recursive_read = False
     self.feed_html_path = html_names_of_path
     self.quiet = False
+  
+  def go(self):
+    if self.scanner_type == ScannerType.XLSX:
+      self.run_xlsx_like()
+    else:
+      self.run()
 
   def set_html_path(self, path):
     self.html_path = path
@@ -169,3 +176,23 @@ class Prime:
 
     print(tabulate([[col_0[i], col_1[i]] for i in range(
         len(high_count))], headers=['高危数', '主机数'], tablefmt="psql"))
+  
+  def run_xlsx_like(self):
+    parser = XLSXReportParser()
+    for filename in tqdm(recursive_xlsx_names_of_path(self.html_path)):
+      vuls, hosts, affections = parser.parse(path=filename)
+      for vul in vuls:
+        if vul not in self.vulnerabilities:
+          self.vulnerabilities.append(vul)
+      for host in hosts:
+        if host not in self.hosts:
+          self.hosts.append(host)
+      for affection in affections:
+        if affection not in self.affections:
+          self.affections[affection] = []
+        self.affections[affection].extend(affections[affection])
+    self.build()
+
+if __name__ == "__main__":
+  prime = Prime()
+  prime.run_xlsx_like()

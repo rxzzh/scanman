@@ -5,6 +5,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 import os
 import re
 ip_regex = re.compile('^([0-9]+\.){3}[0-9]+.html$')
+xlsx_regex = re.compile('^.*\.xlsx$')
 true_ip_regex = re.compile('^([0-9]+\.){3}[0-9]+$')
 
 
@@ -23,6 +24,16 @@ def recursive_html_names_of_path(path):
       if ip_regex.match(name):
         ret.append(os.path.join(current_dir, name))
   return ret
+
+def recursive_xlsx_names_of_path(path):
+  ret = []
+  for current_dir, sub_dirs, file_names in os.walk(path):
+    for name in file_names:
+      if xlsx_regex.match(name):
+        ret.append(os.path.join(current_dir, name))
+  return ret
+
+ 
 
 
 

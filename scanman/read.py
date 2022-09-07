@@ -100,3 +100,52 @@ class XLSXParser:
       ret[ip] = name
       row += 1
     return ret
+
+class XLSXReportParser(Parser):
+  def parse(self, path):
+    wb = load_workbook(path)
+    ws = list(wb)[0]
+    host_ip_col = 2
+    host_name_col = 3
+    vulnerability_name_col = 14
+    vulnerability_severity_col = 13
+    vulnerability_decription_col = 20
+    vulnerability_solution_col = 21
+
+    row = 2
+
+    def get_col_value(col):
+      return ws.cell(column=col, row=row).value
+    
+    hosts = []
+    vuls = []
+    affections = {}
+
+    while True:
+      host_name = get_col_value(col=host_name_col)
+      host_ip = get_col_value(col=host_ip_col)
+      vul_name = get_col_value(col=vulnerability_name_col)
+      vul_severity = get_col_value(col=vulnerability_severity_col)
+      vul_description = get_col_value(col=vulnerability_decription_col)
+      vul_solution = get_col_value(col=vulnerability_solution_col)
+      row += 1
+      severity_map = {'高危':'high','中危':'middle','低危':'low','危急':'critical'}
+      if not host_ip:
+        break
+      vul = Vulnerability(name=vul_name, severity=severity_map[vul_severity], description=vul_description, solution=vul_solution)
+      host = Host(name=host_name, ip=host_ip)
+
+      if vul not in vuls:
+        vuls.append(vul)
+      if host not in hosts:
+        hosts.append(host)
+      if vul.name not in affections:
+        affections[vul.name] = []
+      affections[vul.name].append(host.ip)
+    return vuls, hosts, affections
+
+
+    pass
+
+  def parse_host(self, path):
+    pass
