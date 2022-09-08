@@ -27,6 +27,8 @@ def recursive_html_names_of_path(path):
 
 def recursive_xlsx_names_of_path(path):
   ret = []
+  if path.endswith('.xlsx'):
+    return [path]
   for current_dir, sub_dirs, file_names in os.walk(path):
     for name in file_names:
       if xlsx_regex.match(name):
