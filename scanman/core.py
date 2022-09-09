@@ -1,12 +1,14 @@
 from .utils import html_names_of_path, recursive_html_names_of_path, recursive_xlsx_names_of_path
 from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser
-from .build import build_table, build_table_djcp
+from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini
 from tqdm import tqdm
 from tabulate import tabulate
 
 class TableType:
   YPG = 0
   DJCP = 1
+  DJCP_MINI = 2
+  YPG_MINI = 3
 
 
 class ScannerType:
@@ -90,6 +92,21 @@ class Prime:
           affections=self.affections,
           filename=self.output_full_path
       )
+    if self.table_type == TableType.DJCP_MINI:
+      build_table_djcp_mini(
+        vulnerabilities=self.vulnerabilities,
+        hosts=self.hosts,
+        affections=self.affections,
+        filename=self.output_full_path
+      )
+    if self.table_type == TableType.YPG_MINI:
+      build_table_ypg_mini(
+        vulnerabilities=self.vulnerabilities,
+        hosts=self.hosts,
+        affections=self.affections,
+        filename=self.output_full_path
+      )
+      
 
   def read_vulnerabilities_from_html(self):
     filenames = self.feed_html_path(self.html_path)

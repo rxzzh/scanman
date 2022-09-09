@@ -76,3 +76,42 @@ def build_table_djcp(vulnerabilities: list, hosts: list, affections: dict, filen
     template_path="static/template-vulnlist.docx",
     filename=filename
   )
+
+def build_table_djcp_mini(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
+  vulnerabilities.sort(key=lambda x: num_map[x.severity], reverse=True)
+  records = []
+  for vul in vulnerabilities:
+    record = []
+    record.append(vul.name)
+    record.append(len(affections[vul.name]))
+    record.append(zh_map[vul.severity])
+    records.append(record)
+  records = prefix_id(records)
+  doc_handler.build_doc_tablelike(
+    records=records,
+    template_path="static/template-vulnlist-mini.docx",
+    filename=filename
+  )
+
+
+def build_table_ypg_mini(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
+  print("building...")
+  vulnerabilities.sort(key=lambda x: num_map[x.severity],reverse=True)
+  hashtable_ip2host = {}
+  for host in hosts:
+    hashtable_ip2host[host.ip] = host
+  records = []
+  for vul in vulnerabilities:
+    record = []
+    record.append(vul.name)
+    record.append(vul.description)
+    record.append(zh_map[vul.severity])
+    record.append('/')
+    record.append(len(affections[vul.name]))
+    record.append(vul.solution)
+    record.append("未整改")
+    records.append(record)
+  records = prefix_id(records)
+  doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2-mini.docx", filename=filename)
+  print("done!")
+
