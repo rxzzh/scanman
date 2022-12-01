@@ -6,6 +6,15 @@
 
 ## Usage:
 
+### Windows:
+需要已安装python3
+1. 下载解压scanman-master.zip
+2. cd scanman-master
+3. pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+4. python scanman.py -b "html漏扫报告host文件夹路径"
+5. 其它选项见python scanman.py --help
+
+### Linux:
 1. git clone https://github.com/kuboRenka/scanman.git
 2. cd scanman
 3. pip install -r requirements.txt
