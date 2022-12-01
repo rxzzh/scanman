@@ -64,21 +64,37 @@ def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="
 def build_table_djcp(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
   vulnerabilities.sort(key=lambda x: num_map[x.severity], reverse=True)
   records = []
+  reocrds_E = []
   for vul in vulnerabilities:
     record = []
     record.append(vul.name)
-    record.append(', '.join(affections[vul.name]))
+    record.append(','.join(affections[vul.name]))
     record.append(zh_map[vul.severity])
     records.append(record)
+
+    record = []
+    record.append(zh_map[vul.severity])
+    record.append(vul.name)
+    record.append(','.join(affections[vul.name]))
+    reocrds_E.append(record)
+   
   records = prefix_id(records)
+  reocrds_E = prefix_id(reocrds_E)
   doc_handler.build_doc_tablelike(
     records=records,
     template_path="static/template-vulnlist.docx",
-    filename=filename
+    filename=filename+'-主要安全漏洞.docx'
+  )
+  
+  doc_handler.build_doc_tablelike(
+    records=reocrds_E,
+    template_path="static/template-vulnlist-E.docx",
+    filename=filename+'-附件E漏洞扫描记录.docx'
   )
 
+
 def build_table_djcp_summary(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
-  filename = filename + "_summary.docx"
+  filename = filename + "-漏洞汇总表.docx"
   
   reversed_affections = {}
   for vul_name in list(affections):
