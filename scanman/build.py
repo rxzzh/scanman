@@ -77,6 +77,56 @@ def build_table_djcp(vulnerabilities: list, hosts: list, affections: dict, filen
     filename=filename
   )
 
+def build_table_djcp_summary(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
+  filename = filename + "_summary.docx"
+  
+  reversed_affections = {}
+  for vul_name in list(affections):
+    related_hosts = affections[vul_name]
+    for host in related_hosts:
+      if host not in reversed_affections:
+        reversed_affections[host] = []
+      reversed_affections[host].append(vul_name)
+  
+  records = []
+
+  vulmap = {}
+  for vul in vulnerabilities:
+    vulmap[vul.name] = vul
+  vulnerabilities = vulmap
+
+  sum_low = 0
+  sum_middle = 0
+  sum_high = 0
+
+  for host in [_.ip for _ in hosts]:
+    try:
+      vul_names = reversed_affections[host]
+    except:
+      vul_names = []
+    vul_impacts = [vulnerabilities[name].severity for name in vul_names]
+    
+    
+    
+    count_low = len(list(filter(lambda x: x=='low', vul_impacts)))
+    count_middle = len(list(filter(lambda x: x=='middle', vul_impacts)))
+    count_high = len(list(filter(lambda x: x=='high', vul_impacts)))
+    
+    records.append([host, count_high, count_middle, count_low, count_high+count_middle+count_low])
+    sum_low+=count_low
+    sum_middle+=count_middle
+    sum_high+=count_high
+  records.append(['漏洞数量合计',sum_high,sum_middle,sum_low,sum_high+sum_middle+sum_low])
+  records = prefix_id(records)
+  records[-1][0] = ""
+  doc_handler.build_doc_tablelike(
+    records=records,
+    template_path="static/template-subtotal.docx",
+    filename=filename
+  )
+
+    
+
 def build_table_djcp_mini(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
   vulnerabilities.sort(key=lambda x: num_map[x.severity], reverse=True)
   records = []

@@ -1,8 +1,9 @@
 from .utils import html_names_of_path, recursive_html_names_of_path, recursive_xlsx_names_of_path
 from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser
-from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini
+from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary
 from tqdm import tqdm
 from tabulate import tabulate
+from memory_profiler import profile
 
 class TableType:
   YPG = 0
@@ -91,6 +92,12 @@ class Prime:
           hosts=self.hosts,
           affections=self.affections,
           filename=self.output_full_path
+      )
+      build_table_djcp_summary(
+        vulnerabilities=self.vulnerabilities,
+        hosts=self.hosts,
+        affections=self.affections,
+        filename=self.output_full_path
       )
     if self.table_type == TableType.DJCP_MINI:
       build_table_djcp_mini(
