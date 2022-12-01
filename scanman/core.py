@@ -3,7 +3,6 @@ from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser
 from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary
 from tqdm import tqdm
 from tabulate import tabulate
-from memory_profiler import profile
 
 class TableType:
   YPG = 0
