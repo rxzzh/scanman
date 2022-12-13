@@ -1,5 +1,5 @@
 from .utils import html_names_of_path, recursive_html_names_of_path, recursive_xlsx_names_of_path
-from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser
+from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser, WANGSHENParser
 from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary
 from tqdm import tqdm
 from tabulate import tabulate
@@ -16,6 +16,7 @@ class ScannerType:
   TRX = 1
   NESSUS = 2
   XLSX = 3
+  WANGSHEN = 4
 
 
 class Prime:
@@ -57,7 +58,8 @@ class Prime:
   
   def set_recursive_read(self, recursive):
     self.recursive_read = recursive
-    self.feed_html_path = recursive_html_names_of_path
+    if recursive:
+      self.feed_html_path = recursive_html_names_of_path
   
   def set_quiet(self, quiet):
     self.quiet = quiet
@@ -67,6 +69,8 @@ class Prime:
       self.parser = RSASParser()
     if self.scanner_type == ScannerType.TRX:
       self.parser = TRXParser()
+    if self.scanner_type == ScannerType.WANGSHEN:
+      self.parser = WANGSHENParser()
 
     self.read_vulnerabilities_from_html()
     self.read_hosts_from_html()

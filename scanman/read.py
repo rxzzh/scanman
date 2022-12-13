@@ -149,3 +149,42 @@ class XLSXReportParser(Parser):
 
   def parse_host(self, path):
     pass
+
+class WANGSHENParser(Parser):
+  def parse_vulnerability(self, text):
+    root = etree.HTML(text)
+
+    name_nodes = root.xpath('//*[@class="odd vuln_middle"]')
+    nodes = root.xpath('//*[@class="more hide odd"]')
+    
+    ret = []
+
+    for i in range(len(nodes)):
+      node = nodes[i]
+      name = name_nodes[i].xpath('td[1]/span/text()')[0]
+      threat = node.xpath('td/table/tr[2]/td/text()')[0][0]
+      threat_map = {
+        "高":"high",
+        "中":"middle",
+        "低":"low"
+      }
+      threat = threat_map[threat]
+      desc = node.xpath('td/table/tr[4]/td/text()')[0]
+      solution = node.xpath('td/table/tr[5]/td/text()')[0]
+      new_vuln = Vulnerability(
+        name=name,
+        severity = threat,
+        description = desc,
+        solution=solution
+      )
+      ret.append(new_vuln)
+    return ret
+
+  def parse_host(self, text):
+    root = etree.HTML(text)
+
+    host_ip = root.xpath('//*[@class="report_table plumb"]/tbody/tr[2]/td/text()')[0]
+    vuln_names = root.xpath('//*[@class="odd vuln_middle"]/td[1]/span/text()')
+    return Host(ip=host_ip), vuln_names
+
+  

@@ -11,7 +11,7 @@ true_ip_regex = re.compile('^([0-9]+\.){3}[0-9]+$')
 
 
 def html_names_of_path(path):
-  path = path + '/' if not path.endwith('/') else path
+  path = path + '/' if not path.endswith('/') else path
   filenames = os.listdir(path)
   filenames = list(filter(lambda x: ".html" in x, filenames))
   filenames = [path+_ for _ in filenames]
