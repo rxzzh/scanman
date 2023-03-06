@@ -34,12 +34,16 @@ class Prime:
     self.recursive_read = False
     self.feed_html_path = html_names_of_path
     self.quiet = False
+    self.suspicious = False
   
   def go(self):
     if self.scanner_type == ScannerType.XLSX:
       self.run_xlsx_like()
     else:
       self.run()
+
+  def set_suspicious(self, suspicious):
+    self.suspicious = suspicious
 
   def set_html_path(self, path):
     self.html_path = path
@@ -77,6 +81,8 @@ class Prime:
     self.read_hosts_names_from_xlsx()
     self.read_affections_from_html()
     self.padding_empty_fields()
+    if self.suspicious:
+      self.suspicious_get_rid()
     if not self.quiet:
       self.summary()
     self.build()
@@ -219,6 +225,18 @@ class Prime:
           self.affections[affection] = []
         self.affections[affection].extend(affections[affection])
     self.build()
+  
+  def suspicious_get_rid(self):
+    pass
+    clean_vuls = list(filter(lambda x: x.severity=="low" and "CVE" not in x.name, self.vulnerabilities))
+    self.vulnerabilities = clean_vuls
+    vuln_names = [_.name for _ in self.vulnerabilities]
+    clean_affections = {}
+    for name in self.affections:
+      if name in vuln_names:
+        clean_affections[name] = self.affections[name]
+    self.affections = clean_affections
+    
 
 if __name__ == "__main__":
   prime = Prime()

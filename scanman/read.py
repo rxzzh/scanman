@@ -170,7 +170,10 @@ class WANGSHENParser(Parser):
       }
       threat = threat_map[threat]
       desc = node.xpath('td/table/tr[4]/td/text()')[0]
-      solution = node.xpath('td/table/tr[5]/td/text()')[0]
+      try:
+        solution = node.xpath('td/table/tr[5]/td/text()')[0]
+      except:
+        solution = ""
       new_vuln = Vulnerability(
         name=name,
         severity = threat,
@@ -179,12 +182,10 @@ class WANGSHENParser(Parser):
       )
       ret.append(new_vuln)
     return ret
-
+  
   def parse_host(self, text):
     root = etree.HTML(text)
 
     host_ip = root.xpath('//*[@class="report_table plumb"]/tbody/tr[2]/td/text()')[0]
     vuln_names = root.xpath('//*[@class="odd vuln_middle"]/td[1]/span/text()')
     return Host(ip=host_ip), vuln_names
-
-  
