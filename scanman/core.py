@@ -1,6 +1,6 @@
 from .utils import html_names_of_path, recursive_html_names_of_path, recursive_xlsx_names_of_path
 from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser, WANGSHENParser
-from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary
+from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary, build_table_target
 from tqdm import tqdm
 from tabulate import tabulate
 
@@ -35,6 +35,7 @@ class Prime:
     self.feed_html_path = html_names_of_path
     self.quiet = False
     self.suspicious = False
+    self.target_table_path = ''
   
   def go(self):
     if self.scanner_type == ScannerType.XLSX:
@@ -67,6 +68,9 @@ class Prime:
   
   def set_quiet(self, quiet):
     self.quiet = quiet
+  
+  def set_target(self, target):
+    self.target_table_path = target
 
   def run(self):
     if self.scanner_type == ScannerType.RSAS:
@@ -121,6 +125,11 @@ class Prime:
         hosts=self.hosts,
         affections=self.affections,
         filename=self.output_full_path
+      )
+    if self.target_table_path:
+      build_table_target(
+        hosts=self.hosts,
+        filename=self.target_table_path
       )
       
 
@@ -227,8 +236,8 @@ class Prime:
     self.build()
   
   def suspicious_get_rid(self):
-    pass
-    clean_vuls = list(filter(lambda x: x.severity=="low" and "CVE" not in x.name, self.vulnerabilities))
+    # clean_vuls = list(filter(lambda x: x.severity=="low" and "CVE" not in x.name, self.vulnerabilities))
+    clean_vuls = list(filter(lambda x: x.severity!="high", self.vulnerabilities))
     self.vulnerabilities = clean_vuls
     vuln_names = [_.name for _ in self.vulnerabilities]
     clean_affections = {}

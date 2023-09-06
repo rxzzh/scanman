@@ -181,3 +181,13 @@ def build_table_ypg_mini(vulnerabilities: list, hosts: list, affections: dict, f
   doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2-mini.docx", filename=filename)
   print("done!")
 
+
+def build_table_target(hosts, filename):
+  records = []
+  for host in hosts:
+    record = []
+    record.append(host.name)
+    record.append(host.ip)
+    records.append(record)
+  records = prefix_id(records)
+  doc_handler.build_doc_tablelike(records=records, template_path="static/template-target.docx", filename=filename)

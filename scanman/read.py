@@ -63,7 +63,7 @@ class RSASParser(Parser):
     vuln_names = root.xpath(
         '//*[@id="vul_detail"]/table/tr/td/span/text()')
     vuln_names = list(map(str.strip, vuln_names))
-    return Host(ip=host_ip), vuln_names
+    return Host(ip=host_ip, name=""), vuln_names
 
 
 class TRXParser(Parser):
