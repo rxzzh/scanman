@@ -4,6 +4,9 @@
 
 读取破极光html格式漏扫报告，生成DJCP、YPG格式漏扫报告。
 
+## Update 240813 ✨: 
+已构建Windows下的GUI版本，在release获取。
+
 ## Usage:
 
 ### Windows:
