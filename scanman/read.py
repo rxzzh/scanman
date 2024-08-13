@@ -1,6 +1,7 @@
 from lxml import etree
 from .model import Vulnerability, Host
 from openpyxl import load_workbook
+import pandas as pd
 
 
 class Parser:
@@ -63,7 +64,11 @@ class RSASParser(Parser):
     vuln_names = root.xpath(
         '//*[@id="vul_detail"]/table/tr/td/span/text()')
     vuln_names = list(map(str.strip, vuln_names))
-    return Host(ip=host_ip, name=""), vuln_names
+
+    ports = root.xpath('/html/body/div/div[4]/div[6]/div[2]/table/tbody/tr/td[1]/text()')
+    ports = [_.strip() for _ in ports]
+
+    return Host(ip=host_ip, name="", ports=ports), vuln_names
 
 
 class TRXParser(Parser):
@@ -80,25 +85,33 @@ class XLSXParser:
 
   def read_host_name_ip(self, path):
     wb = load_workbook(path)
-    ws = list(wb)[0]
-    ip_col = -1
-    name_col = -1
+    # ws = list(wb)[0]
+
     ret = {}
-    row = 1
-    for col in range(1, 64):
-      value = ws.cell(column=col, row=row).value
-      if value == 'ip':
-        ip_col = col
-      if value == 'name':
-        name_col = col
-    row = 2
-    while True:
-      if ws.cell(column=ip_col, row=row).value == None:
-        break
-      ip = ws.cell(column=ip_col, row=row).value
-      name = ws.cell(column=name_col, row=row).value
-      ret[ip] = name
-      row += 1
+    for ws in list(wb):
+      # ip_col = -1
+      name_col = -1
+      row = 1
+      ip_cols = []
+      for col in range(1, 64):
+        value = ws.cell(column=col, row=row).value
+        if value == 'ip':
+          ip_col = col
+          ip_cols.append(col)
+        if value == 'name':
+          name_col = col
+      row = 2
+      while True:
+        if ws.cell(column=ip_col, row=row).value == None:
+          break
+        # ip = ws.cell(column=ip_col, row=row).value
+        ips = [ws.cell(column=col, row=row).value for col in ip_cols]
+        name = ws.cell(column=name_col, row=row).value
+        for ip in ips:
+          ret[ip] = name
+        # ret[ip] = ''
+        # ret[ip] += name
+        row += 1
     return ret
 
 class XLSXReportParser(Parser):
@@ -149,6 +162,23 @@ class XLSXReportParser(Parser):
 
   def parse_host(self, path):
     pass
+
+class XLSXSelectiveRemoveParser(Parser):
+  def parse(self, path):
+    df = pd.read_excel(path)
+
+    # 确定文件中是否有我们需要的列名，例如vuln_name和ip，这里假设这两列存在
+    # 并将这些数据转换为二元组列表
+    tuple_list = list(zip(df['vuln_name'], df['ip']))
+
+    # 显示前几个元素以验证
+    return tuple_list
+  
+  def function_parse(path):
+    selective_parser = XLSXSelectiveRemoveParser()
+    return selective_parser.parse(path=path)
+   
+
 
 class WANGSHENParser(Parser):
   def parse_vulnerability(self, text):

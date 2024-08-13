@@ -1,6 +1,6 @@
 from .utils import html_names_of_path, recursive_html_names_of_path, recursive_xlsx_names_of_path
-from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser, WANGSHENParser
-from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary, build_table_target
+from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser, WANGSHENParser, XLSXSelectiveRemoveParser
+from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary, build_table_target, build_port_xlsx
 from tqdm import tqdm
 from tabulate import tabulate
 
@@ -9,6 +9,7 @@ class TableType:
   DJCP = 1
   DJCP_MINI = 2
   YPG_MINI = 3
+  DEV_PORT = 4
 
 
 class ScannerType:
@@ -36,6 +37,8 @@ class Prime:
     self.quiet = False
     self.suspicious = False
     self.target_table_path = ''
+    self.reuslt_amount = -1 
+    self.selective_remove_path = None
   
   def go(self):
     if self.scanner_type == ScannerType.XLSX:
@@ -71,6 +74,12 @@ class Prime:
   
   def set_target(self, target):
     self.target_table_path = target
+  
+  def set_limit_result_amount(self, limit):
+    self.reuslt_amount = limit
+  
+  def set_selective_remove(self, path):
+    self.selective_remove_path = path
 
   def run(self):
     if self.scanner_type == ScannerType.RSAS:
@@ -84,9 +93,12 @@ class Prime:
     self.read_hosts_from_html()
     self.read_hosts_names_from_xlsx()
     self.read_affections_from_html()
-    self.padding_empty_fields()
+    self.selective_remove_vulns()
+    if self.reuslt_amount > -1:
+      self.limit_reuslt_amount(max_ip_for_vulnerability=self.reuslt_amount)
     if self.suspicious:
       self.suspicious_get_rid()
+    self.padding_empty_fields()
     if not self.quiet:
       self.summary()
     self.build()
@@ -125,6 +137,10 @@ class Prime:
         hosts=self.hosts,
         affections=self.affections,
         filename=self.output_full_path
+      )
+    if self.table_type == TableType.DEV_PORT:
+      build_port_xlsx(
+        hosts=self.hosts
       )
     if self.target_table_path:
       build_table_target(
@@ -245,6 +261,31 @@ class Prime:
       if name in vuln_names:
         clean_affections[name] = self.affections[name]
     self.affections = clean_affections
+    
+  def limit_reuslt_amount(self, max_ip_for_vulnerability):
+    for affection in self.affections:
+      affection_count = len(self.affections[affection])
+      self.affections[affection] = self.affections[affection][:max_ip_for_vulnerability]
+      self.affections[affection].append("等共{}个IP地址".format(affection_count))
+      # print(self.affections[affection])
+
+  def selective_remove_vulns(self):
+    if not self.selective_remove_path:
+      return
+    remove_tuples = XLSXSelectiveRemoveParser.function_parse(path=self.selective_remove_path)
+    print('[INFO]读取到{}条“漏洞-IP”整改记录'.format(len(remove_tuples)))
+    count = 0
+    for tuple in remove_tuples:
+      vuln_name = tuple[0]
+      ip = tuple[1]
+      if vuln_name in self.affections and ip in self.affections[vuln_name]:
+        self.affections[vuln_name].remove(ip)
+        if len(self.affections[vuln_name]) == 0:
+          del self.affections[vuln_name]
+          self.vulnerabilities.remove(vuln_name)
+        count += 1
+    print('[INFO]已修正{}个IP'.format(count))
+    
     
 
 if __name__ == "__main__":

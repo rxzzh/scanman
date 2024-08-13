@@ -6,6 +6,7 @@ from typing import Optional, List
 class Host(BaseModel):
   ip: str
   name: Optional[str]
+  ports: Optional[List]
 
   def __hash__(self) -> int:
     return hash(self.ip)
@@ -24,4 +25,7 @@ class Vulnerability(BaseModel):
     return hash(self.name)
 
   def __eq__(self, other) -> bool:
-    return True if other.name == self.name else False
+    if isinstance(other, Vulnerability):
+      return True if other.name == self.name else False
+    if isinstance(other, str):
+      return True if other == self.name else False

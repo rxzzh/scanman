@@ -2,6 +2,7 @@ from docx import Document
 from .utils import gadget_fill_cell, gadget_fill_cell_super, gadget_set_row_height
 from tqdm import tqdm
 from rich import print as print
+import pandas as pd
 
 
 class DocHandler:
@@ -52,7 +53,7 @@ def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="
     record.append(vul.name)
     record.append(vul.description)
     record.append(zh_map[vul.severity])
-    record.append('\n'.join([hashtable_ip2host[_].name for _ in affections[vul.name]]))
+    record.append('\n'.join([hashtable_ip2host[_].name for _ in list(filter(lambda x: 'IP' not in x, affections[vul.name]))]))
     record.append('\n'.join(affections[vul.name]))
     record.append(vul.solution)
     record.append("未整改")
@@ -191,3 +192,11 @@ def build_table_target(hosts, filename):
     records.append(record)
   records = prefix_id(records)
   doc_handler.build_doc_tablelike(records=records, template_path="static/template-target.docx", filename=filename)
+
+def build_port_xlsx(hosts):
+  hosts_dict_list = [host.dict() for host in hosts]
+
+  df = pd.DataFrame(hosts_dict_list)
+
+  excel_path = 'hosts_data.xlsx'
+  df.to_excel(excel_path, index=False)
