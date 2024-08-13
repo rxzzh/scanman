@@ -4,3 +4,5 @@ scanman/__pycache__/*
 test_data/*
 out.docx
 out/*
+dist/
+build/
