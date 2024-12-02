@@ -2,7 +2,9 @@ from .utils import html_names_of_path, recursive_html_names_of_path, recursive_x
 from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser, WANGSHENParser, XLSXSelectiveRemoveParser
 from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary, build_table_target, build_port_xlsx
 from tqdm import tqdm
+import plotext as plt
 from tabulate import tabulate
+from rich import print as rprint
 
 class TableType:
   YPG = 0
@@ -197,43 +199,130 @@ class Prime:
       if not host.name:
         host.name = "主机"+host.ip
 
+
   def summary(self):
+      total_count = len(self.vulnerabilities)
+      high_count = len(list(filter(lambda x: x.severity == "high", self.vulnerabilities)))
+      middle_count = len(list(filter(lambda x: x.severity == "middle", self.vulnerabilities)))
+      low_count = len(list(filter(lambda x: x.severity == "low", self.vulnerabilities)))
 
-    total_count = len(self.vulnerabilities)
-    high_count = len(
-        list(filter(lambda x: x.severity == "high", self.vulnerabilities)))
-    middle_count = len(
-        list(filter(lambda x: x.severity == "middle", self.vulnerabilities)))
-    low_count = len(
-        list(filter(lambda x: x.severity == "low", self.vulnerabilities)))
+      # 使用tabulate打印高危、中危、低危、全部漏洞数量
+      rprint("\n漏洞总体统计：")
+      vulnerability_summary = [
+          ["低危", low_count],
+          ["中危", middle_count],
+          ["高危", high_count],
+          ["总数", total_count]
+      ]
+      rprint(tabulate(vulnerability_summary, headers=["漏洞级别", "数量"], tablefmt="pretty", colalign=("left", "right")))
 
-    print(tabulate([[low_count, middle_count, high_count, total_count]], headers=[
-          '低危', '中危', '高危', '总数'], tablefmt="psql"))
+      rprint("\n漏洞总体统计图：")
+      plt.clear_figure()
+      plt.bar(["低危", "中危", "高危", "总数"], [low_count, middle_count, high_count, total_count], color="red")
+      plt.title("漏洞总体统计")
+      plt.show()
 
-    host_vul_count = {}
-    vulnerability_map = {}
-    for vul in self.vulnerabilities:
-      vulnerability_map[vul.name] = vul
-    for affection in self.affections:
-      hosts = self.affections[affection]
-      severity = vulnerability_map[affection].severity
-      for host in hosts:
-        if host not in host_vul_count:
-          host_vul_count[host] = {'low': 0, 'middle': 0, 'high': 0}
-        host_vul_count[host][severity] += 1
-    highest = 0
-    for count in host_vul_count:
-      if host_vul_count[count]['high'] > highest:
-        highest = host_vul_count[count]['high']
-    high_count = [0] * (highest+1)
-    for count in host_vul_count:
-      high_count[host_vul_count[count]['high']] += 1
+      host_vul_count = {}
+      vulnerability_map = {}
+      for vul in self.vulnerabilities:
+          vulnerability_map[vul.name] = vul
+      for affection in self.affections:
+          hosts = self.affections[affection]
+          severity = vulnerability_map[affection].severity
+          for host in hosts:
+              if host not in host_vul_count:
+                  host_vul_count[host] = {'low': 0, 'middle': 0, 'high': 0}
+              host_vul_count[host][severity] += 1
+      
+      highest = 0
+      for count in host_vul_count:
+          if host_vul_count[count]['high'] > highest:
+              highest = host_vul_count[count]['high']
+      high_count = [0] * (highest+1)
+      for count in host_vul_count:
+          high_count[host_vul_count[count]['high']] += 1
 
-    col_0 = range(len(high_count))
-    col_1 = high_count
+      rprint("\n高危漏洞数量分布：")
 
-    print(tabulate([[col_0[i], col_1[i]] for i in range(
-        len(high_count))], headers=['高危数', '主机数'], tablefmt="psql"))
+      # 准备数据
+      x = [str(i) for i in range(len(high_count))]
+      y = high_count
+
+      # 创建图表
+      plt.clear_figure()
+      plt.bar(x, y)
+      plt.title("高危漏洞-主机数量分布")
+      plt.xlabel("高危漏洞数量")
+      plt.ylabel("主机数量")
+      plt.show()
+
+      rprint("横坐标：高危漏洞数量")
+      rprint("纵坐标：对应的主机数量\n")
+
+      # 使用plotext打印漏洞-主机表
+      rprint("\n漏洞数量分布：")
+      vuln_count_distribution = {}
+      for host, counts in host_vul_count.items():
+          total_vulns = sum(counts.values())
+          if total_vulns not in vuln_count_distribution:
+              vuln_count_distribution[total_vulns] = 0
+          vuln_count_distribution[total_vulns] += 1
+
+      x = list(vuln_count_distribution.keys())
+      y = list(vuln_count_distribution.values())
+      plt.clear_figure()
+      plt.bar(x, y)
+      plt.title("漏洞-主机数量分布")
+      plt.xlabel("漏洞数量")
+      plt.ylabel("主机数量")
+      plt.show()
+
+      rprint("横坐标：漏洞数量（总数，不区分高中低）")
+      rprint("纵坐标：对应主机数量\n")
+
+      # 表格形式输出
+      col_0 = range(len(high_count))
+      col_1 = high_count
+      rprint("\n高危漏洞数量分布（表格形式）：")
+      table_data = [[col_0[i], col_1[i]] for i in range(len(high_count))]
+      table_data = list(filter(lambda x: x[1]>0, table_data))
+      rprint(tabulate(table_data, 
+                    headers=['高危数', '主机数'], 
+                    tablefmt="pretty"))
+
+
+
+
+
+      # 受影响主机Top 20
+      host_total_vulns = {host: sum(counts.values()) for host, counts in host_vul_count.items()}
+      top_20_hosts = sorted(host_total_vulns.items(), key=lambda x: x[1], reverse=True)[:20]
+      
+      rprint("\n受影响主机Top 20：")
+      headers = ["主机", "漏洞数"]
+      rprint(tabulate(top_20_hosts, headers=headers, tablefmt="pretty", colalign=("left", "right")))
+
+      # 添加0漏洞IP表格
+      zero_vuln_ips = [host for host, total_vulns in host_total_vulns.items() if total_vulns == 0]
+      
+      if zero_vuln_ips:
+          rprint("\n0漏洞IP：")
+          # 将IP地址分成多列显示，每列最多显示20个IP
+          columns = 4
+          rows = -(-len(zero_vuln_ips) // columns)  # 向上取整
+          ip_table = []
+          for i in range(rows):
+              row = zero_vuln_ips[i::rows]
+              row += [''] * (columns - len(row))  # 填充空字符串以保持列数一致
+              ip_table.append(row)
+          
+          headers = [f"Column {i+1}" for i in range(columns)]
+          rprint(tabulate(ip_table, headers=headers, tablefmt="pretty"))
+          rprint(f"\n总计: {len(zero_vuln_ips)} 个0漏洞IP")
+      else:
+          # rprint("\n没有0漏洞的IP地址。")
+          pass
+
   
   def run_xlsx_like(self):
     parser = XLSXReportParser()
