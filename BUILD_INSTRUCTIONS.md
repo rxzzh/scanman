@@ -47,7 +47,7 @@ pyinstaller --onefile --noconsole --name=漏洞扫描报告生成器 --add-data=
 ### 文件结构
 ```
 dist/
-├── 漏洞扫描报告生成器.exe  # 主程序可执行文件
+├── ScanReportGenerator.exe  # 主程序可执行文件
 ├── static/                 # 模板文件夹（必需）
 │   ├── template-subtotal.docx
 │   ├── template-target.docx

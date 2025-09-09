@@ -94,7 +94,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='漏洞扫描报告生成器',
+    name='ScanReportGenerator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

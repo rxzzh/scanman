@@ -78,7 +78,7 @@ def build_executable():
             sys.executable, "-m", "PyInstaller",
             "--onefile",                    # 打包成单个文件
             "--console",                    # 显示控制台窗口以便用户看到有效信息
-            "--name=漏洞扫描报告生成器",        # 指定输出文件名
+            "--name=ScanReportGenerator",     # 指定输出文件名
             "--add-data=static;static",     # 添加static文件夹到打包中 (Windows格式)
             "--distpath=dist",              # 指定输出目录
             "--workpath=build",             # 指定工作目录
@@ -150,7 +150,7 @@ def verify_build():
     """验证构建结果"""
     safe_print("Verifying build results...")
     
-    exe_name = "漏洞扫描报告生成器.exe" if os.name == 'nt' else "漏洞扫描报告生成器"
+    exe_name = "ScanReportGenerator.exe" if os.name == 'nt' else "ScanReportGenerator"
     exe_path = Path("dist") / exe_name
     
     if exe_path.exists():

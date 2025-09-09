@@ -5,7 +5,7 @@ from scanman.core import Prime, ScannerType, TableType
 class VulnerabilityScanReportGenerator:
     def __init__(self, master):
         self.master = master
-        master.title("漏洞扫描报告生成器 by rxzzh")
+        master.title("Vulnerability Scan Report Generator by rxzzh")
 
         self.create_widgets()
 

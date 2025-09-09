@@ -66,41 +66,39 @@ jobs:
       with:
         name: scanman-windows-build
         path: |
-          dist/漏洞扫描报告生成器.exe
+          dist/ScanReportGenerator.exe
           dist/static/
           dist/README.md
         retention-days: 30
         
     - name: Create release archive
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      shell: powershell
+      shell: pwsh
       run: |
-        echo "Creating release package..."
-        New-Item -ItemType Directory -Name release-package -Force | Out-Null
+        Write-Host "Creating release package..."
+        New-Item -ItemType Directory -Name "release-package" -Force | Out-Null
         
-        echo "Copying executable..."
-        Copy-Item -Path dist\漏洞扫描报告生成器.exe -Destination release-package\ -Force
+        Write-Host "Copying executable..."
+        Copy-Item -Path "dist/ScanReportGenerator.exe" -Destination "release-package/" -Force
         
-        echo "Copying static folder..."
-        if (Test-Path dist\static) {
-          Copy-Item -Path dist\static -Destination release-package\static -Recurse -Force
+        Write-Host "Copying static folder..."
+        if (Test-Path "dist/static") {
+          Copy-Item -Path "dist/static" -Destination "release-package/static" -Recurse -Force
         } else {
-          echo "Warning: static folder not found"
+          Write-Host "Warning: static folder not found"
         }
         
-        echo "Copying README..."
-        if (Test-Path dist\README.md) {
-          Copy-Item -Path dist\README.md -Destination release-package\ -Force
+        Write-Host "Copying README..."
+        if (Test-Path "dist/README.md") {
+          Copy-Item -Path "dist/README.md" -Destination "release-package/" -Force
         } else {
-          echo "README.md not found, skipping"
+          Write-Host "README.md not found, skipping"
         }
         
-        echo "Creating zip archive..."
-        $sourcePath = "release-package\*"
-        $destPath = "scanman-windows-latest.zip"
-        Compress-Archive -Path $sourcePath -DestinationPath $destPath -Force
+        Write-Host "Creating zip archive..."
+        Compress-Archive -Path "release-package/*" -DestinationPath "scanman-windows-latest.zip" -Force
         
-        echo "Release package created successfully"
+        Write-Host "Release package created successfully"
         
     - name: Get current date
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -116,7 +114,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: v${{ steps.date.outputs.date }}
-        release_name: 漏洞扫描报告生成器 v${{ steps.date.outputs.date }}
+        release_name: Vulnerability Scan Report Generator v${{ steps.date.outputs.date }}
         body: |
           ## 🚀 自动构建发布
           
@@ -125,14 +123,14 @@ jobs:
           **分支**: ${{ github.ref_name }}
           
            ### 📦 包含内容
-           - `漏洞扫描报告生成器.exe` - 主程序可执行文件
+           - `ScanReportGenerator.exe` - 主程序可执行文件
            - `static/` - Word模板文件夹（必需）
            - `README.md` - 使用说明
           
           ### 🔧 使用方法
-          1. 下载并解压 `scanman-windows-latest.zip`
-          2. 双击运行 `漏洞扫描报告生成器.exe`
-          3. 按照GUI界面提示操作
+           1. 下载并解压 `scanman-windows-latest.zip`
+           2. 双击运行 `ScanReportGenerator.exe`
+           3. 按照GUI界面提示操作
           
           ---
           *此版本由 GitHub Actions 自动构建*
@@ -187,20 +185,20 @@ jobs:
         PYTHONUTF8: 1
         
     - name: Verify build
+      shell: pwsh
       run: |
-        if (Test-Path "dist\漏洞扫描报告生成器.exe") {
-          echo "✅ Build successful - executable created"
-          $size = (Get-Item "dist\漏洞扫描报告生成器.exe").Length / 1MB
-          echo "📊 Executable size: $([math]::Round($size, 2)) MB"
+        if (Test-Path "dist/ScanReportGenerator.exe") {
+          Write-Host "Build successful - executable created"
+          $size = (Get-Item "dist/ScanReportGenerator.exe").Length / 1MB
+          Write-Host "Executable size: $([math]::Round($size, 2)) MB"
         } else {
-          echo "❌ Build failed - executable not found"
+          Write-Host "Build failed - executable not found"
           exit 1
         }
         
-        if (Test-Path "dist\static") {
-          $templateCount = (Get-ChildItem "dist\static\*.docx").Count
-          echo "📄 Template files found: $templateCount"
+        if (Test-Path "dist/static") {
+          $templateCount = (Get-ChildItem "dist/static/*.docx").Count
+          Write-Host "Template files found: $templateCount"
         } else {
-          echo "⚠️ Warning: static folder not found"
+          Write-Host "Warning: static folder not found"
         }
-      shell: powershell
