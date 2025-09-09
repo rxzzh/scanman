@@ -1,0 +1,170 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: windows-2019  # 使用Windows 10环境
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Build executable
+      run: |
+        python ci_build_exe.py
+        
+    - name: List dist contents (debug)
+      run: |
+        echo "Contents of dist directory:"
+        dir dist /s
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: scanman-windows-build
+        path: |
+          dist/漏洞扫描报告生成器.exe
+          dist/static/
+          dist/README.md
+        retention-days: 30
+        
+    - name: Create release archive
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        # 创建发布压缩包
+        mkdir release-package
+        copy "dist\漏洞扫描报告生成器.exe" release-package\
+        xcopy "dist\static" "release-package\static" /E /I /H
+        copy "dist\README.md" release-package\ 2>nul || echo "README.md not found, skipping"
+        
+        # 创建版本信息文件
+        echo "Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" > release-package\BUILD_INFO.txt
+        echo "Commit: ${{ github.sha }}" >> release-package\BUILD_INFO.txt
+        echo "Branch: ${{ github.ref_name }}" >> release-package\BUILD_INFO.txt
+        
+        # 压缩文件
+        Compress-Archive -Path release-package\* -DestinationPath scanman-windows-latest.zip
+      shell: powershell
+        
+    - name: Get current date
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      id: date
+      run: echo "date=$(Get-Date -Format 'yyyy-MM-dd-HHmm')" >> $env:GITHUB_OUTPUT
+      shell: powershell
+      
+    - name: Create Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ steps.date.outputs.date }}
+        release_name: 漏洞扫描报告生成器 v${{ steps.date.outputs.date }}
+        body: |
+          ## 🚀 自动构建发布
+          
+          **构建时间**: ${{ steps.date.outputs.date }}
+          **提交**: ${{ github.sha }}
+          **分支**: ${{ github.ref_name }}
+          
+          ### 📦 包含内容
+          - `漏洞扫描报告生成器.exe` - 主程序可执行文件
+          - `static/` - Word模板文件夹（必需）
+          - `README.md` - 使用说明
+          - `BUILD_INFO.txt` - 构建信息
+          
+          ### 🔧 使用方法
+          1. 下载并解压 `scanman-windows-latest.zip`
+          2. 双击运行 `漏洞扫描报告生成器.exe`
+          3. 按照GUI界面提示操作
+          
+          ### ⚠️ 重要说明
+          - 请确保 `static` 文件夹与可执行文件在同一目录
+          - 支持多种扫描器格式：RSAS、XLSX、WANGSHEN、NSFOCUS、GREEN_LEAGUE
+          - 支持多种输出格式：YPG、DJCP、DJCP_MINI、YPG_MINI、DEV_PORT
+          
+          ---
+          *此版本由 GitHub Actions 自动构建*
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Asset
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./scanman-windows-latest.zip
+        asset_name: scanman-windows-latest.zip
+        asset_content_type: application/zip
+
+  # 可选：在PR时进行构建测试（不发布）
+  test-build:
+    runs-on: windows-2019
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+        
+    - name: Test build
+      run: |
+        python ci_build_exe.py
+        
+    - name: Verify build
+      run: |
+        if (Test-Path "dist\漏洞扫描报告生成器.exe") {
+          echo "✅ Build successful - executable created"
+          $size = (Get-Item "dist\漏洞扫描报告生成器.exe").Length / 1MB
+          echo "📊 Executable size: $([math]::Round($size, 2)) MB"
+        } else {
+          echo "❌ Build failed - executable not found"
+          exit 1
+        }
+        
+        if (Test-Path "dist\static") {
+          $templateCount = (Get-ChildItem "dist\static\*.docx").Count
+          echo "📄 Template files found: $templateCount"
+        } else {
+          echo "⚠️ Warning: static folder not found"
+        }
+      shell: powershell
