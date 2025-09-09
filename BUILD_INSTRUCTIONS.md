@@ -29,7 +29,7 @@ pyinstaller --onefile --noconsole --name=漏洞扫描报告生成器 --add-data=
 
 当代码推送到 `main` 分支时，会自动触发构建和发布流程：
 
-1. **构建环境**: Windows Server 2022 (windows-latest), Python 3.11
+1. **构建环境**: Windows Server 2022 (windows-latest, 2025年9月后将迁移到Windows Server 2025), Python 3.11
 2. **构建产物**: 
    - `漏洞扫描报告生成器.exe` - 主程序
    - `static/` 文件夹 - Word模板文件
@@ -107,3 +107,22 @@ python -c "import scanman; print('导入成功')"
 - 发布版本格式: `vYYYY-MM-DD-HHMM`
 - 每次推送到main分支都会创建新的release
 - Release包含完整的可执行文件和模板文件
+
+## 最新更新 (2025年1月)
+
+### GitHub Actions 组件更新
+
+- **Artifact Actions**: 升级到 `upload-artifact@v4`
+  - 提升上传和下载速度最高98%
+  - v3版本将于2025年1月30日弃用
+  
+- **Windows Runner**: 使用 `windows-latest`
+  - 当前: Windows Server 2022
+  - 2025年9月2日后: 自动迁移到Windows Server 2025
+  - 向前兼容，无需手动干预
+
+### 兼容性保证
+
+- 所有现有功能保持不变
+- 构建产物格式不变
+- 用户使用体验不受影响

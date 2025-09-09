@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest  # 使用最新的Windows环境 (Windows Server 2022)
+    runs-on: windows-latest  # 使用最新的Windows环境 (当前: Windows Server 2022, 2025年9月后: Windows Server 2025)
     
     steps:
     - name: Checkout code
@@ -45,7 +45,7 @@ jobs:
         dir dist /s
         
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: scanman-windows-build
         path: |
@@ -128,7 +128,7 @@ jobs:
 
   # 可选：在PR时进行构建测试（不发布）
   test-build:
-    runs-on: windows-latest
+    runs-on: windows-latest  # 当前: Windows Server 2022, 2025年9月后: Windows Server 2025
     if: github.event_name == 'pull_request'
     
     steps:
