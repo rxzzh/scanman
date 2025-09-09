@@ -73,22 +73,34 @@ jobs:
         
     - name: Create release archive
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      shell: powershell
       run: |
-        # 创建发布压缩包
-        New-Item -ItemType Directory -Name "release-package" -Force
-        Copy-Item "dist\漏洞扫描报告生成器.exe" "release-package\"
+        Write-Host "Creating release package..."
+        New-Item -ItemType Directory -Name "release-package" -Force | Out-Null
+        
+        Write-Host "Copying executable..."
+        Copy-Item -Path "dist\漏洞扫描报告生成器.exe" -Destination "release-package\" -Force
+        
+        Write-Host "Copying static folder..."
         if (Test-Path "dist\static") {
-          Copy-Item "dist\static" "release-package\static" -Recurse -Force
+          Copy-Item -Path "dist\static" -Destination "release-package\static" -Recurse -Force
+        } else {
+          Write-Host "Warning: static folder not found"
         }
+        
+        Write-Host "Copying README..."
         if (Test-Path "dist\README.md") {
-          Copy-Item "dist\README.md" "release-package\"
+          Copy-Item -Path "dist\README.md" -Destination "release-package\" -Force
         } else {
           Write-Host "README.md not found, skipping"
         }
         
-        # 压缩文件
-        Compress-Archive -Path "release-package\*" -DestinationPath "scanman-windows-latest.zip" -Force
-      shell: powershell
+        Write-Host "Creating zip archive..."
+        $sourcePath = "release-package\*"
+        $destPath = "scanman-windows-latest.zip"
+        Compress-Archive -Path $sourcePath -DestinationPath $destPath -Force
+        
+        Write-Host "Release package created successfully!"
         
     - name: Get current date
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
