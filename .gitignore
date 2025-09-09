@@ -6,3 +6,5 @@ out.docx
 out/*
 dist/
 build/
+.venv/
+data/*

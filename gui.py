@@ -23,9 +23,9 @@ class VulnerabilityScanReportGenerator:
         self.table_type.grid(row=1, column=1, padx=5, pady=5)
 
         # Scanner Type
-        ttk.Label(self.master, text="扫描器类型").grid(row=2, column=0, sticky="w", padx=5, pady=5)
-        self.scanner_type = ttk.Combobox(self.master, values=["RSAS", "XLSX", "WANGSHEN"])
-        self.scanner_type.set("RSAS")
+        ttk.Label(self.master, text="扫描器类型（默认自动选择）").grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        self.scanner_type = ttk.Combobox(self.master, values=["RSAS", "XLSX", "WANGSHEN", "NSFOCUS", "GREEN_LEAGUE", "AUTO"])
+        self.scanner_type.set("AUTO")
         self.scanner_type.grid(row=2, column=1, padx=5, pady=5)
 
         # XLSX Path
@@ -48,6 +48,10 @@ class VulnerabilityScanReportGenerator:
         # Quiet Mode
         self.quiet = tk.BooleanVar()
         ttk.Checkbutton(self.master, text="安静模式", variable=self.quiet).grid(row=6, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+
+        # Suspicious Mode
+        self.suspicious = tk.BooleanVar()
+        ttk.Checkbutton(self.master, text="SUS", variable=self.suspicious).grid(row=6, column=2, columnspan=2, sticky="w", padx=5, pady=5)
 
         # Target Path
         ttk.Label(self.master, text="漏扫目标表格输出路径（仅DEV_PORT需要）").grid(row=7, column=0, sticky="w", padx=5, pady=5)
@@ -102,10 +106,14 @@ class VulnerabilityScanReportGenerator:
             scanner_type_mapping = {
                 "RSAS": ScannerType.RSAS,
                 "XLSX": ScannerType.XLSX,
-                "WANGSHEN": ScannerType.WANGSHEN
+                "WANGSHEN": ScannerType.WANGSHEN,
+                "NSFOCUS": ScannerType.NSFOCUS,
+                "GREEN_LEAGUE": ScannerType.GREEN_LEAGUE,
+                "AUTO": ScannerType.AUTO
             }
             prime.set_scanner_type(scanner_type_mapping[self.scanner_type.get()])
             prime.set_quiet(quiet=self.quiet.get())
+            prime.set_suspicious(suspicious=self.suspicious.get())
 
             prime.go()
 
