@@ -10,38 +10,61 @@ import shutil
 import subprocess
 from pathlib import Path
 
+# 设置控制台编码为UTF-8，避免在Windows环境中出现中文显示问题
+def safe_print(text):
+    """安全的打印函数，避免编码问题"""
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        # 如果出现编码错误，使用ASCII安全模式
+        safe_text = text.encode('ascii', 'replace').decode('ascii')
+        print(safe_text)
+
+if sys.platform == 'win32':
+    import locale
+    try:
+        # 尝试设置控制台编码为UTF-8
+        os.system('chcp 65001 >nul 2>&1')
+        # 重新配置标准输出编码
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8')
+    except:
+        # 如果设置失败，使用ASCII安全模式
+        pass
+
 def ensure_requirements():
     """确保所需的依赖已安装"""
-    print("检查并安装构建依赖...")
+    safe_print("Checking and installing build dependencies...")
     try:
         import PyInstaller
-        print("✓ PyInstaller 已安装")
+        safe_print("✓ PyInstaller installed")
     except ImportError:
-        print("安装 PyInstaller...")
+        safe_print("Installing PyInstaller...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
     
     # 安装项目依赖
     if os.path.exists("requirements.txt"):
-        print("安装项目依赖...")
+        safe_print("Installing project dependencies...")
         subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
 
 def clean_build_dirs():
     """清理构建目录"""
-    print("清理构建目录...")
+    safe_print("Cleaning build directories...")
     dirs_to_clean = ["build", "dist", "__pycache__"]
     for dir_name in dirs_to_clean:
         if os.path.exists(dir_name):
             shutil.rmtree(dir_name)
-            print(f"✓ 已清理 {dir_name}")
+            safe_print(f"✓ Cleaned {dir_name}")
 
 def build_executable():
     """构建可执行文件"""
-    print("开始构建可执行文件...")
+    safe_print("Starting executable build...")
     
     # 检查是否存在优化的spec文件
     spec_file = "build.spec"
     if os.path.exists(spec_file):
-        print(f"使用优化的spec文件: {spec_file}")
+        safe_print(f"Using optimized spec file: {spec_file}")
         cmd = [
             sys.executable, "-m", "PyInstaller",
             "--distpath=dist",              # 指定输出目录
@@ -49,7 +72,7 @@ def build_executable():
             spec_file                       # 使用spec文件
         ]
     else:
-        print("使用默认构建参数...")
+        safe_print("Using default build parameters...")
         # 构建命令参数
         cmd = [
             sys.executable, "-m", "PyInstaller",
@@ -84,25 +107,25 @@ def build_executable():
                     cmd[i] = "--add-data=static:static"
                     break
     
-    print(f"执行命令: {' '.join(cmd)}")
+    safe_print(f"Executing command: {' '.join(cmd)}")
     
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        print("✓ 构建成功!")
+        safe_print("✓ Build successful!")
         if result.stdout:
-            print("构建输出:")
-            print(result.stdout)
+            safe_print("Build output:")
+            safe_print(result.stdout)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"✗ 构建失败: {e}")
-        print(f"错误输出: {e.stderr}")
+        safe_print(f"✗ Build failed: {e}")
+        safe_print(f"Error output: {e.stderr}")
         if e.stdout:
-            print(f"标准输出: {e.stdout}")
+            safe_print(f"Standard output: {e.stdout}")
         return False
 
 def copy_additional_files():
     """复制额外的必需文件到dist目录"""
-    print("复制额外文件...")
+    safe_print("Copying additional files...")
     
     # 确保static文件夹被复制（作为备份）
     static_src = Path("static")
@@ -112,7 +135,7 @@ def copy_additional_files():
         if static_dst.exists():
             shutil.rmtree(static_dst)
         shutil.copytree(static_src, static_dst)
-        print("✓ 已复制 static 文件夹")
+        safe_print("✓ Copied static folder")
     
     # 复制其他重要文件
     important_files = ["README.md"]
@@ -121,45 +144,45 @@ def copy_additional_files():
         if src_file.exists():
             dst_file = Path("dist") / file_name
             shutil.copy2(src_file, dst_file)
-            print(f"✓ 已复制 {file_name}")
+            safe_print(f"✓ Copied {file_name}")
 
 def verify_build():
     """验证构建结果"""
-    print("验证构建结果...")
+    safe_print("Verifying build results...")
     
     exe_name = "漏洞扫描报告生成器.exe" if os.name == 'nt' else "漏洞扫描报告生成器"
     exe_path = Path("dist") / exe_name
     
     if exe_path.exists():
         size_mb = exe_path.stat().st_size / (1024 * 1024)
-        print(f"✓ 可执行文件已生成: {exe_path}")
-        print(f"✓ 文件大小: {size_mb:.2f} MB")
+        safe_print(f"✓ Executable generated: {exe_path}")
+        safe_print(f"✓ File size: {size_mb:.2f} MB")
         
         # 检查static文件夹
         static_path = Path("dist/static")
         if static_path.exists():
             template_files = list(static_path.glob("*.docx"))
-            print(f"✓ 模板文件数量: {len(template_files)}")
+            safe_print(f"✓ Template files count: {len(template_files)}")
             for template in template_files:
-                print(f"  - {template.name}")
+                safe_print(f"  - {template.name}")
         else:
-            print("⚠ 警告: static文件夹未找到")
+            safe_print("⚠ Warning: static folder not found")
         
         return True
     else:
-        print(f"✗ 可执行文件未找到: {exe_path}")
+        safe_print(f"✗ Executable not found: {exe_path}")
         return False
 
 def main():
     """主函数"""
-    print("=" * 50)
-    print("漏洞扫描报告生成器 - CI构建脚本")
-    print("=" * 50)
+    safe_print("=" * 50)
+    safe_print("Vulnerability Scan Report Generator - CI Build Script")
+    safe_print("=" * 50)
     
     try:
         # 检查当前目录
         if not os.path.exists("gui.py"):
-            print("✗ 错误: 未找到 gui.py 文件，请在项目根目录运行此脚本")
+            safe_print("✗ Error: gui.py not found, please run this script in the project root directory")
             sys.exit(1)
         
         # 执行构建步骤
@@ -172,21 +195,21 @@ def main():
         copy_additional_files()
         
         if verify_build():
-            print("\n" + "=" * 50)
-            print("✓ 构建完成！")
-            print("✓ 可执行文件位于 dist/ 目录")
-            print("=" * 50)
+            safe_print("\n" + "=" * 50)
+            safe_print("✓ Build completed!")
+            safe_print("✓ Executable located in dist/ directory")
+            safe_print("=" * 50)
         else:
-            print("\n" + "=" * 50)
-            print("✗ 构建验证失败")
-            print("=" * 50)
+            safe_print("\n" + "=" * 50)
+            safe_print("✗ Build verification failed")
+            safe_print("=" * 50)
             sys.exit(1)
             
     except KeyboardInterrupt:
-        print("\n用户中断构建")
+        safe_print("\nBuild interrupted by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n✗ 构建过程中发生错误: {e}")
+        safe_print(f"\n✗ Error occurred during build: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

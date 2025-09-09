@@ -35,9 +35,21 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
         
+    - name: Set up environment for UTF-8
+      run: |
+        # 设置环境变量以支持UTF-8编码
+        echo "PYTHONIOENCODING=utf-8" >> $env:GITHUB_ENV
+        echo "PYTHONUTF8=1" >> $env:GITHUB_ENV
+        # 设置控制台代码页为UTF-8
+        chcp 65001
+      shell: powershell
+        
     - name: Build executable
       run: |
         python ci_build_exe.py
+      env:
+        PYTHONIOENCODING: utf-8
+        PYTHONUTF8: 1
         
     - name: List dist contents (debug)
       run: |
@@ -146,9 +158,21 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
         
+    - name: Set up environment for UTF-8
+      run: |
+        # 设置环境变量以支持UTF-8编码
+        echo "PYTHONIOENCODING=utf-8" >> $env:GITHUB_ENV
+        echo "PYTHONUTF8=1" >> $env:GITHUB_ENV
+        # 设置控制台代码页为UTF-8
+        chcp 65001
+      shell: powershell
+        
     - name: Test build
       run: |
         python ci_build_exe.py
+      env:
+        PYTHONIOENCODING: utf-8
+        PYTHONUTF8: 1
         
     - name: Verify build
       run: |
