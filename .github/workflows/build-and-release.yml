@@ -75,18 +75,19 @@ jobs:
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         # 创建发布压缩包
-        mkdir release-package
-        copy "dist\漏洞扫描报告生成器.exe" release-package\
-        xcopy "dist\static" "release-package\static" /E /I /H
-        copy "dist\README.md" release-package\ 2>nul || echo "README.md not found, skipping"
-        
-        # 创建版本信息文件
-        echo "Build Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" > release-package\BUILD_INFO.txt
-        echo "Commit: ${{ github.sha }}" >> release-package\BUILD_INFO.txt
-        echo "Branch: ${{ github.ref_name }}" >> release-package\BUILD_INFO.txt
+        New-Item -ItemType Directory -Name "release-package" -Force
+        Copy-Item "dist\漏洞扫描报告生成器.exe" "release-package\"
+        if (Test-Path "dist\static") {
+          Copy-Item "dist\static" "release-package\static" -Recurse -Force
+        }
+        if (Test-Path "dist\README.md") {
+          Copy-Item "dist\README.md" "release-package\"
+        } else {
+          Write-Host "README.md not found, skipping"
+        }
         
         # 压缩文件
-        Compress-Archive -Path release-package\* -DestinationPath scanman-windows-latest.zip
+        Compress-Archive -Path "release-package\*" -DestinationPath "scanman-windows-latest.zip" -Force
       shell: powershell
         
     - name: Get current date
@@ -111,21 +112,15 @@ jobs:
           **提交**: ${{ github.sha }}
           **分支**: ${{ github.ref_name }}
           
-          ### 📦 包含内容
-          - `漏洞扫描报告生成器.exe` - 主程序可执行文件
-          - `static/` - Word模板文件夹（必需）
-          - `README.md` - 使用说明
-          - `BUILD_INFO.txt` - 构建信息
+           ### 📦 包含内容
+           - `漏洞扫描报告生成器.exe` - 主程序可执行文件
+           - `static/` - Word模板文件夹（必需）
+           - `README.md` - 使用说明
           
           ### 🔧 使用方法
           1. 下载并解压 `scanman-windows-latest.zip`
           2. 双击运行 `漏洞扫描报告生成器.exe`
           3. 按照GUI界面提示操作
-          
-          ### ⚠️ 重要说明
-          - 请确保 `static` 文件夹与可执行文件在同一目录
-          - 支持多种扫描器格式：RSAS、XLSX、WANGSHEN、NSFOCUS、GREEN_LEAGUE
-          - 支持多种输出格式：YPG、DJCP、DJCP_MINI、YPG_MINI、DEV_PORT
           
           ---
           *此版本由 GitHub Actions 自动构建*
