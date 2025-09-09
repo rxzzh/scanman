@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2019  # 使用Windows 10环境
+    runs-on: windows-latest  # 使用最新的Windows环境 (Windows Server 2022)
     
     steps:
     - name: Checkout code
@@ -128,7 +128,7 @@ jobs:
 
   # 可选：在PR时进行构建测试（不发布）
   test-build:
-    runs-on: windows-2019
+    runs-on: windows-latest
     if: github.event_name == 'pull_request'
     
     steps:

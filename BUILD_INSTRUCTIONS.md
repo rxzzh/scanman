@@ -29,7 +29,7 @@ pyinstaller --onefile --noconsole --name=漏洞扫描报告生成器 --add-data=
 
 当代码推送到 `main` 分支时，会自动触发构建和发布流程：
 
-1. **构建环境**: Windows 10, Python 3.11
+1. **构建环境**: Windows Server 2022 (windows-latest), Python 3.11
 2. **构建产物**: 
    - `漏洞扫描报告生成器.exe` - 主程序
    - `static/` 文件夹 - Word模板文件
