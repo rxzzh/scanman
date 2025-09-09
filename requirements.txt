@@ -7,3 +7,5 @@ python_docx>=0.8.10
 rich>=12.5.1
 tabulate>=0.8.10
 tqdm>=4.51.0
+pandas
+plotext

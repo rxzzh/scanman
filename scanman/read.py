@@ -2,6 +2,8 @@ from lxml import etree
 from .model import Vulnerability, Host
 from openpyxl import load_workbook
 import pandas as pd
+import json
+import re
 
 
 class Parser:
@@ -15,6 +17,19 @@ class Parser:
       ret = ret.replace(token, "")
     return ret
 
+  def detect(self, text):
+    """
+    检测文本是否为该Parser可处理的格式
+    子类可以重写此方法来实现特定的指纹识别
+    
+    Args:
+        text: 输入的HTML文本内容（bytes或str）
+    
+    Returns:
+        bool: True表示该Parser可以处理此格式，False表示不能处理
+    """
+    return False
+
   def parse_vulnerability(self, text):
     pass
 
@@ -23,6 +38,23 @@ class Parser:
 
 
 class RSASParser(Parser):
+  def detect(self, text):
+    """检测是否为RSAS格式的报告"""
+    if isinstance(text, bytes):
+      try:
+        text = text.decode('utf-8')
+      except UnicodeDecodeError:
+        text = text.decode('gbk', errors='ignore')
+    
+    # RSAS特征：包含特定的HTML结构
+    rsas_patterns = [
+      'id="vul_detail"',
+      'class="solution"',
+      'id="content"'
+    ]
+    
+    return all(pattern in text for pattern in rsas_patterns)
+
   def parse_vulnerability(self, text):
     root = etree.HTML(text)
 
@@ -72,6 +104,18 @@ class RSASParser(Parser):
 
 
 class TRXParser(Parser):
+  def detect(self, text):
+    """检测是否为TRX格式的报告"""
+    if isinstance(text, bytes):
+      try:
+        text = text.decode('utf-8')
+      except UnicodeDecodeError:
+        text = text.decode('gbk', errors='ignore')
+    
+    # TRX特征：这里需要根据实际的TRX报告格式来定义
+    # 暂时返回False，等待具体实现
+    return False
+
   def parse_vulnerability(self, text):
     return super().parse_vulnerability(text)
 
@@ -181,6 +225,23 @@ class XLSXSelectiveRemoveParser(Parser):
 
 
 class WANGSHENParser(Parser):
+  def detect(self, text):
+    """检测是否为网神格式的报告"""
+    if isinstance(text, bytes):
+      try:
+        text = text.decode('utf-8')
+      except UnicodeDecodeError:
+        text = text.decode('gbk', errors='ignore')
+    
+    # 网神特征：包含特定的CSS类名
+    wangshen_patterns = [
+      'class="odd vuln_middle"',
+      'class="more hide odd"',
+      'class="report_table plumb"'
+    ]
+    
+    return all(pattern in text for pattern in wangshen_patterns)
+
   def parse_vulnerability(self, text):
     root = etree.HTML(text)
 
@@ -219,3 +280,252 @@ class WANGSHENParser(Parser):
     host_ip = root.xpath('//*[@class="report_table plumb"]/tbody/tr[2]/td/text()')[0]
     vuln_names = root.xpath('//*[@class="odd vuln_middle"]/td[1]/span/text()')
     return Host(ip=host_ip), vuln_names
+
+class NSFOCUSParser(Parser):
+  def detect(self, text):
+    """检测是否为绿盟NSFOCUS格式的报告"""
+    if isinstance(text, bytes):
+      try:
+        text = text.decode('utf-8')
+      except UnicodeDecodeError:
+        text = text.decode('gbk', errors='ignore')
+    
+    # NSFOCUS特征：包含window.data变量定义
+    nsfocus_patterns = [
+      'window.data',
+      '"mark":"vul-detail"',
+      '"mark":"host-summary"'
+    ]
+    
+    return all(pattern in text for pattern in nsfocus_patterns)
+
+  def _extract_json(self, text):
+    # The data is in a script tag as a javascript variable.
+    # We can use regex to extract it.
+    if isinstance(text, bytes):
+      try:
+        text = text.decode('utf-8')
+      except UnicodeDecodeError:
+        text = text.decode('gbk', errors='ignore')
+        
+    match = re.search(r'window\.data\s*=\s*(\{.*?\});', text, re.DOTALL)
+    if match:
+      json_str = match.group(1)
+      return json.loads(json_str)
+    return None
+
+  def parse_vulnerability(self, text):
+    data = self._extract_json(text)
+    if not data:
+      return []
+
+    ret = []
+    vuln_info_category = next((cat for cat in data.get('categories', []) if cat.get('mark') == 'vul-detail'), None)
+    
+    if not vuln_info_category:
+        return []
+
+    for item in vuln_info_category.get('data', {}).get('vul_items', []):
+      for vul in item.get('vuls', []):
+        vul_msg = vul.get('vul_msg', {})
+        name = vul_msg.get('i18n_name')
+        severity = vul.get('vul_level') # 'low', 'middle', 'high'
+        description = "".join(vul_msg.get('i18n_description', []))
+        solution = "".join(vul_msg.get('i18n_solution', []))
+
+        if name and severity:
+          new_vuln = Vulnerability(
+            name=name,
+            severity=severity,
+            description=self.clean(description),
+            solution=self.clean(solution)
+          )
+          if new_vuln not in ret:
+            ret.append(new_vuln)
+            
+    return ret
+
+  def parse_host(self, text):
+    data = self._extract_json(text)
+    if not data:
+      return None, []
+
+    host_ip = ""
+    host_name = ""
+    ports = []
+    vuln_names = []
+
+    # Get host IP and name
+    host_summary_category = next((cat for cat in data.get('categories', []) if cat.get('mark') == 'host-summary'), None)
+    if host_summary_category:
+      host_data = host_summary_category.get('data', {})
+      host_ip = host_data.get('target', '')
+      host_name = host_data.get('hostname', '')
+
+    # Get ports
+    other_info_category = next((cat for cat in data.get('categories', []) if cat.get('mark') == 'other-info'), None)
+    if other_info_category:
+        other_info_data = other_info_category.get('data',{}).get('other_info_data',[])
+        remote_ports_info = next((info for info in other_info_data if info.get('info_name') == '远程端口信息'), None)
+        if remote_ports_info:
+            ports = [str(content[0]) for content in remote_ports_info.get('content', [])]
+
+
+    # Get vulnerability names
+    vuln_info_category = next((cat for cat in data.get('categories', []) if cat.get('mark') == 'vul-detail'), None)
+    if vuln_info_category:
+      for item in vuln_info_category.get('data', {}).get('vul_items', []):
+        for vul in item.get('vuls', []):
+          vul_msg = vul.get('vul_msg', {})
+          name = vul_msg.get('i18n_name')
+          if name and name not in vuln_names:
+            vuln_names.append(name)
+    
+    host = Host(ip=host_ip, name=host_name, ports=ports)
+    return host, vuln_names
+
+class GreenLeagueParser(Parser):
+  def detect(self, text):
+    """检测是否为绿盟GreenLeague格式的报告"""
+    if isinstance(text, bytes):
+      try:
+        text = text.decode('utf-8')
+      except UnicodeDecodeError:
+        text = text.decode('gbk', errors='ignore')
+    
+    # GreenLeague特征：包含特定的script标签结构
+    greenleague_patterns = [
+      '<script>window.data = ',
+    ]
+    
+    return all(pattern in text for pattern in greenleague_patterns)
+
+  def _extract_json(self, text):
+    # The data is in a script tag as a javascript variable.
+    # Use script tags as delimiters to extract JSON data.
+    if isinstance(text, bytes):
+      try:
+        text = text.decode('utf-8')
+      except UnicodeDecodeError:
+        text = text.decode('gbk', errors='ignore')
+    
+    # Find the start and end positions
+    start_marker = '<script>window.data = '
+    end_marker = '</script>'
+    
+    start_pos = text.find(start_marker)
+    if start_pos == -1:
+      return None
+    
+    start_pos += len(start_marker)
+    end_pos = text.find(end_marker, start_pos)
+    if end_pos == -1:
+      return None
+    
+    # Extract the JSON string and remove the trailing semicolon
+    json_str = text[start_pos:end_pos].rstrip(';')
+    try:
+      return json.loads(json_str)
+    except json.JSONDecodeError:
+      return None
+
+  def parse_vulnerability(self, text):
+    data = self._extract_json(text)
+    if not data:
+      return []
+
+    ret = []
+    
+    # 查找漏洞详情类别，可能在顶级类别或子类别中
+    vuln_detail_data = None
+    
+    for category in data.get('categories', []):
+      # 检查顶级类别
+      if category.get('mark') == 'vul-detail':
+        vuln_detail_data = category.get('data', {})
+        break
+      
+      # 检查子类别
+      if 'children' in category:
+        for child in category['children']:
+          if child.get('mark') == 'vul-detail':
+            vuln_detail_data = child.get('data', {})
+            break
+        if vuln_detail_data:
+          break
+    
+    if not vuln_detail_data:
+      return []
+
+    for item in vuln_detail_data.get('vul_items', []):
+      for vul in item.get('vuls', []):
+        vul_msg = vul.get('vul_msg', {})
+        name = vul_msg.get('i18n_name')
+        severity = vul.get('vul_level') # 'low', 'middle', 'high'
+        description = "".join(vul_msg.get('i18n_description', []))
+        solution = "".join(vul_msg.get('i18n_solution', []))
+
+        if name and severity:
+          new_vuln = Vulnerability(
+            name=name,
+            severity=severity,
+            description=self.clean(description),
+            solution=self.clean(solution)
+          )
+          if new_vuln not in ret:
+            ret.append(new_vuln)
+            
+    return ret
+
+  def parse_host(self, text):
+    data = self._extract_json(text)
+    if not data:
+      return None, []
+
+    host_ip = ""
+    host_name = ""
+    ports = []
+    vuln_names = []
+
+    # Get host IP and name
+    host_summary_category = next((cat for cat in data.get('categories', []) if cat.get('mark') == 'host-summary'), None)
+    if host_summary_category:
+      host_data = host_summary_category.get('data', {})
+      host_ip = host_data.get('target', '')
+      host_name = host_data.get('hostname', '')
+
+    # Get ports from other-info section
+    other_info_category = next((cat for cat in data.get('categories', []) if cat.get('mark') == 'other-info'), None)
+    if other_info_category:
+        other_info_data = other_info_category.get('data', {}).get('other_info_data', [])
+        remote_ports_info = next((info for info in other_info_data if info.get('info_name') == '远程端口信息'), None)
+        if remote_ports_info:
+            ports = [str(content[0]) for content in remote_ports_info.get('content', [])]
+
+    # Get vulnerability names - 查找漏洞详情类别，可能在顶级类别或子类别中
+    vuln_detail_data = None
+    for category in data.get('categories', []):
+      # 检查顶级类别
+      if category.get('mark') == 'vul-detail':
+        vuln_detail_data = category.get('data', {})
+        break
+      
+      # 检查子类别
+      if 'children' in category:
+        for child in category['children']:
+          if child.get('mark') == 'vul-detail':
+            vuln_detail_data = child.get('data', {})
+            break
+        if vuln_detail_data:
+          break
+    
+    if vuln_detail_data:
+      for item in vuln_detail_data.get('vul_items', []):
+        for vul in item.get('vuls', []):
+          vul_msg = vul.get('vul_msg', {})
+          name = vul_msg.get('i18n_name')
+          if name and name not in vuln_names:
+            vuln_names.append(name)
+    
+    host = Host(ip=host_ip, name=host_name, ports=ports)
+    return host, vuln_names

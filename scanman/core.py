@@ -1,5 +1,5 @@
 from .utils import html_names_of_path, recursive_html_names_of_path, recursive_xlsx_names_of_path
-from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser, WANGSHENParser, XLSXSelectiveRemoveParser
+from .read import RSASParser, XLSXParser, TRXParser, XLSXReportParser, WANGSHENParser, XLSXSelectiveRemoveParser, NSFOCUSParser, GreenLeagueParser
 from .build import build_table, build_table_djcp, build_table_djcp_mini, build_table_ypg_mini, build_table_djcp_summary, build_table_target, build_port_xlsx
 from tqdm import tqdm
 import plotext as plt
@@ -20,6 +20,9 @@ class ScannerType:
   NESSUS = 2
   XLSX = 3
   WANGSHEN = 4
+  NSFOCUS = 5
+  GREEN_LEAGUE = 6
+  AUTO = 7  # 自动检测模式
 
 
 class Prime:
@@ -83,18 +86,74 @@ class Prime:
   def set_selective_remove(self, path):
     self.selective_remove_path = path
 
+  def auto_detect_parser(self, text):
+    """
+    自动检测并返回合适的Parser
+    
+    Args:
+        text: HTML文本内容
+    
+    Returns:
+        Parser: 匹配的Parser实例，如果没有匹配则返回None
+    """
+    # 创建所有可能的Parser实例
+    parsers = [
+      RSASParser(),
+      WANGSHENParser(), 
+      NSFOCUSParser(),
+      GreenLeagueParser(),
+      TRXParser()  # TRX暂时没有实现detect方法，放在最后
+    ]
+    
+    # 尝试每个Parser的detect方法
+    for parser in parsers:
+      if hasattr(parser, 'detect') and parser.detect(text):
+        return parser
+    
+    return None
+
   def run(self):
     if self.scanner_type == ScannerType.RSAS:
       self.parser = RSASParser()
-    if self.scanner_type == ScannerType.TRX:
+    elif self.scanner_type == ScannerType.TRX:
       self.parser = TRXParser()
-    if self.scanner_type == ScannerType.WANGSHEN:
+    elif self.scanner_type == ScannerType.WANGSHEN:
       self.parser = WANGSHENParser()
+    elif self.scanner_type == ScannerType.NSFOCUS:
+      self.parser = NSFOCUSParser()
+    elif self.scanner_type == ScannerType.GREEN_LEAGUE:
+      self.parser = GreenLeagueParser()
+    elif self.scanner_type == ScannerType.AUTO:
+      # 自动模式：不预设parser，在处理文件时动态选择
+      self.parser = None
+    
+    if self.scanner_type == ScannerType.AUTO:
+      self.run_auto_mode()
+    else:
+      self.run_fixed_parser_mode()
 
+  def run_fixed_parser_mode(self):
+    """使用固定Parser的原有模式"""
     self.read_vulnerabilities_from_html()
     self.read_hosts_from_html()
     self.read_hosts_names_from_xlsx()
     self.read_affections_from_html()
+    self.selective_remove_vulns()
+    if self.reuslt_amount > -1:
+      self.limit_reuslt_amount(max_ip_for_vulnerability=self.reuslt_amount)
+    if self.suspicious:
+      self.suspicious_get_rid()
+    self.padding_empty_fields()
+    if not self.quiet:
+      self.summary()
+    self.build()
+    
+  def run_auto_mode(self):
+    """自动检测Parser的新模式"""
+    self.read_vulnerabilities_from_html_auto()
+    self.read_hosts_from_html_auto()
+    self.read_hosts_names_from_xlsx()
+    self.read_affections_from_html_auto()
     self.selective_remove_vulns()
     if self.reuslt_amount > -1:
       self.limit_reuslt_amount(max_ip_for_vulnerability=self.reuslt_amount)
@@ -161,6 +220,34 @@ class Prime:
         if vul not in self.vulnerabilities:
           self.vulnerabilities.append(vul)
 
+  def read_vulnerabilities_from_html_auto(self):
+    """自动模式：读取漏洞信息"""
+    filenames = self.feed_html_path(self.html_path)
+    parser_stats = {}  # 统计各Parser的使用次数
+    
+    for name in tqdm(filenames):
+      with open(name, 'rb') as f:
+        text = f.read()
+      
+      # 自动检测Parser
+      parser = self.auto_detect_parser(text)
+      if parser is None:
+        if not self.quiet:
+          print(f"警告：无法识别文件格式: {name}")
+        continue
+      
+      # 统计Parser使用情况
+      parser_name = type(parser).__name__
+      parser_stats[parser_name] = parser_stats.get(parser_name, 0) + 1
+      
+      new_vuls = parser.parse_vulnerability(text)
+      for vul in new_vuls:
+        if vul not in self.vulnerabilities:
+          self.vulnerabilities.append(vul)
+    
+    if not self.quiet and parser_stats:
+      print(f"Parser使用统计: {parser_stats}")
+
   def read_hosts_from_html(self):
     filenames = self.feed_html_path(self.html_path)
     for name in tqdm(filenames):
@@ -169,6 +256,27 @@ class Prime:
       new_host = self.parser.parse_host(text)[0]
       if new_host not in self.hosts:
         self.hosts.append(new_host)
+
+  def read_hosts_from_html_auto(self):
+    """自动模式：读取主机信息"""
+    filenames = self.feed_html_path(self.html_path)
+    
+    for name in tqdm(filenames):
+      with open(name, 'rb') as f:
+        text = f.read()
+      
+      # 自动检测Parser
+      parser = self.auto_detect_parser(text)
+      if parser is None:
+        continue
+      
+      try:
+        new_host = parser.parse_host(text)[0]
+        if new_host not in self.hosts:
+          self.hosts.append(new_host)
+      except Exception as e:
+        if not self.quiet:
+          print(f"警告：解析主机信息失败: {name}, 错误: {e}")
 
   def read_affections_from_html(self):
     filenames = self.feed_html_path(self.html_path)
@@ -180,6 +288,29 @@ class Prime:
         if vul not in self.affections:
           self.affections[vul] = []
         self.affections[vul].append(host.ip)
+
+  def read_affections_from_html_auto(self):
+    """自动模式：读取影响关系"""
+    filenames = self.feed_html_path(self.html_path)
+    
+    for name in tqdm(filenames):
+      with open(name, 'rb') as f:
+        text = f.read()
+      
+      # 自动检测Parser
+      parser = self.auto_detect_parser(text)
+      if parser is None:
+        continue
+      
+      try:
+        host, affections = parser.parse_host(text)
+        for vul in affections:
+          if vul not in self.affections:
+            self.affections[vul] = []
+          self.affections[vul].append(host.ip)
+      except Exception as e:
+        if not self.quiet:
+          print(f"警告：解析影响关系失败: {name}, 错误: {e}")
 
   def read_hosts_names_from_xlsx(self):
     if self.xlsx_path == "":
