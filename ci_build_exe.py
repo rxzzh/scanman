@@ -78,7 +78,7 @@ def build_executable():
             sys.executable, "-m", "PyInstaller",
             "--onefile",                    # 打包成单个文件
             "--console",                    # 显示控制台窗口以便用户看到有效信息
-            "--name=ScanReportGenerator",     # 指定输出文件名
+            "--name=scanman",     # 指定输出文件名
             "--add-data=static;static",     # 添加static文件夹到打包中 (Windows格式)
             "--distpath=dist",              # 指定输出目录
             "--workpath=build",             # 指定工作目录

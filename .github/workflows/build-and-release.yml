@@ -66,7 +66,7 @@ jobs:
       with:
         name: scanman-windows-build
         path: |
-          dist/ScanReportGenerator.exe
+          dist/scanman.exe
           dist/static/
           dist/README.md
         retention-days: 30
@@ -79,7 +79,7 @@ jobs:
         New-Item -ItemType Directory -Name "release-package" -Force | Out-Null
         
         Write-Host "Copying executable..."
-        Copy-Item -Path "dist/ScanReportGenerator.exe" -Destination "release-package/" -Force
+        Copy-Item -Path "dist/scanman.exe" -Destination "release-package/" -Force
         
         Write-Host "Copying static folder..."
         if (Test-Path "dist/static") {
@@ -123,13 +123,13 @@ jobs:
           **分支**: ${{ github.ref_name }}
           
            ### 📦 包含内容
-           - `ScanReportGenerator.exe` - 主程序可执行文件
+           - `scanman.exe` - 主程序可执行文件
            - `static/` - Word模板文件夹（必需）
            - `README.md` - 使用说明
           
           ### 🔧 使用方法
            1. 下载并解压 `scanman-windows-latest.zip`
-           2. 双击运行 `ScanReportGenerator.exe`
+           2. 双击运行 `scanman.exe`
            3. 按照GUI界面提示操作
           
           ---
@@ -187,9 +187,9 @@ jobs:
     - name: Verify build
       shell: pwsh
       run: |
-        if (Test-Path "dist/ScanReportGenerator.exe") {
+        if (Test-Path "dist/scanman.exe") {
           Write-Host "Build successful - executable created"
-          $size = (Get-Item "dist/ScanReportGenerator.exe").Length / 1MB
+          $size = (Get-Item "dist/scanman.exe").Length / 1MB
           Write-Host "Executable size: $([math]::Round($size, 2)) MB"
         } else {
           Write-Host "Build failed - executable not found"
