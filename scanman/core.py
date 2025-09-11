@@ -172,6 +172,10 @@ class Prime:
           affections=self.affections,
           filename=self.output_full_path
       )
+      build_table_target(
+        hosts=self.hosts,
+        filename=self.output_full_path
+      )
     if self.table_type == TableType.DJCP:
       build_table_djcp(
           vulnerabilities=self.vulnerabilities,
