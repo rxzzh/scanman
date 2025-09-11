@@ -8,4 +8,14 @@ dist/
 build/
 .venv/
 data/*
-./*.docx
+
+# 排除所有 docx 文件，但保留 static/*.docx
+*.docx
+!static/*.docx
+
+# 排除所有 xlsx、html、doc、xls、pdf 文件
+*.xlsx
+*.html
+*.doc
+*.xls
+*.pdf
