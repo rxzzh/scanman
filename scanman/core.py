@@ -44,6 +44,8 @@ class Prime:
     self.target_table_path = ''
     self.reuslt_amount = -1 
     self.selective_remove_path = None
+    self.filter_enabled = False
+    self.filter_rules = {}
   
   def go(self):
     if self.scanner_type == ScannerType.XLSX:
@@ -86,6 +88,12 @@ class Prime:
   def set_selective_remove(self, path):
     self.selective_remove_path = path
 
+  def set_filter_rules(self, rules):
+    self.filter_rules = rules
+
+  def set_filter_enabled(self, enabled: bool):
+    self.filter_enabled = enabled
+
   def auto_detect_parser(self, text):
     """
     自动检测并返回合适的Parser
@@ -127,43 +135,35 @@ class Prime:
       # 自动模式：不预设parser，在处理文件时动态选择
       self.parser = None
     
+    # 根据模式读取数据
     if self.scanner_type == ScannerType.AUTO:
-      self.run_auto_mode()
+      self.read_vulnerabilities_from_html_auto()
+      self.read_hosts_from_html_auto()
+      self.read_affections_from_html_auto()
     else:
-      self.run_fixed_parser_mode()
+      self.read_vulnerabilities_from_html()
+      self.read_hosts_from_html()
+      self.read_affections_from_html()
 
-  def run_fixed_parser_mode(self):
-    """使用固定Parser的原有模式"""
-    self.read_vulnerabilities_from_html()
-    self.read_hosts_from_html()
     self.read_hosts_names_from_xlsx()
-    self.read_affections_from_html()
+    
+    # 执行通用的后续处理步骤
+    self._process_data()
+
+  def _process_data(self):
+    """提取出的通用数据处理流程"""
+    if self.filter_enabled and self.filter_rules:
+      self.filter_affections(self.filter_rules)
     self.selective_remove_vulns()
-    if self.reuslt_amount > -1:
-      self.limit_reuslt_amount(max_ip_for_vulnerability=self.reuslt_amount)
     if self.suspicious:
       self.suspicious_get_rid()
+    if self.reuslt_amount > -1:
+      self.limit_reuslt_amount(max_ip_for_vulnerability=self.reuslt_amount)
     self.padding_empty_fields()
     if not self.quiet:
       self.summary()
     self.build()
     
-  def run_auto_mode(self):
-    """自动检测Parser的新模式"""
-    self.read_vulnerabilities_from_html_auto()
-    self.read_hosts_from_html_auto()
-    self.read_hosts_names_from_xlsx()
-    self.read_affections_from_html_auto()
-    self.selective_remove_vulns()
-    if self.reuslt_amount > -1:
-      self.limit_reuslt_amount(max_ip_for_vulnerability=self.reuslt_amount)
-    if self.suspicious:
-      self.suspicious_get_rid()
-    self.padding_empty_fields()
-    if not self.quiet:
-      self.summary()
-    self.build()
-
   def build(self):
     if self.table_type == TableType.YPG:
       build_table(
@@ -481,7 +481,115 @@ class Prime:
       if name in vuln_names:
         clean_affections[name] = self.affections[name]
     self.affections = clean_affections
+
+  def filter_affections(self, rules):
+    """
+    根据提供的规则过滤 affections 和 vulnerabilities。
+
+    Args:
+        rules (dict): 过滤规则的DSL。
+    """
+    # 创建漏洞名称到对象的映射以便快速查找
+    vuln_map = {v.name: v for v in self.vulnerabilities}
     
+    # 待删除的漏洞名称
+    vulns_to_remove = set()
+
+    for vuln_name, ips in self.affections.items():
+      vuln = vuln_map.get(vuln_name)
+      if not vuln:
+        continue
+
+      # 对每个漏洞的IP列表进行过滤
+      filtered_ips = [ip for ip in ips if self._evaluate_rules(rules, vuln, ip)]
+      
+      if not filtered_ips:
+        # 如果过滤后没有IP，则标记该漏洞以便后续删除
+        vulns_to_remove.add(vuln_name)
+      else:
+        # 更新IP列表
+        self.affections[vuln_name] = filtered_ips
+
+    # 删除没有关联IP的漏洞
+    for vuln_name in vulns_to_remove:
+      del self.affections[vuln_name]
+    
+    # 更新 self.vulnerabilities 列表
+    self.vulnerabilities = [v for v in self.vulnerabilities if v.name not in vulns_to_remove]
+
+  def _evaluate_rules(self, rules, vuln, ip):
+    """
+    递归评估过滤规则。
+
+    Args:
+        rules (dict): 规则DSL。
+        vuln (Vulnerability): 当前漏洞对象。
+        ip (str): 当前IP地址。
+
+    Returns:
+        bool: 如果满足规则则返回True，否则返回False。
+    """
+    logical_operator = rules.get("logical_operator", "AND").upper()
+    
+    results = []
+    for rule in rules.get("rules", []):
+      if "logical_operator" in rule:
+        # 嵌套规则
+        results.append(self._evaluate_rules(rule, vuln, ip))
+      else:
+        # 基本规则
+        results.append(self._check_rule(rule, vuln, ip))
+
+    if logical_operator == "AND":
+      return all(results)
+    elif logical_operator == "OR":
+      return any(results)
+    elif logical_operator == "NOT":
+      # NOT 操作符只对其后的第一个（也应该是唯一一个）规则生效
+      return not results[0] if results else True
+    
+    return False
+
+  def _check_rule(self, rule, vuln, ip):
+    """
+    检查单个规则。
+
+    Args:
+        rule (dict): 单个规则。
+        vuln (Vulnerability): 漏洞对象。
+        ip (str): IP地址。
+
+    Returns:
+        bool: 规则是否匹配。
+    """
+    field = rule.get("field")
+    operator = rule.get("operator", "equal").lower()
+    value = rule.get("value")
+
+    target_value = None
+    if field == "ip":
+      target_value = ip
+    elif hasattr(vuln, field):
+      target_value = getattr(vuln, field)
+    
+    if target_value is None:
+      return False
+
+    if operator == "equal":
+      return target_value == value
+    elif operator == "not equal":
+      return target_value != value
+    elif operator == "in":
+      return target_value in value
+    elif operator == "not in":
+      return target_value not in value
+    elif operator == "contains":
+      return isinstance(target_value, str) and value in target_value
+    elif operator == "not contains":
+      return isinstance(target_value, str) and value not in target_value
+      
+    return False
+
   def limit_reuslt_amount(self, max_ip_for_vulnerability):
     for affection in self.affections:
       affection_count = len(self.affections[affection])
