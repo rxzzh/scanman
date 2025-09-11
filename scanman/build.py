@@ -42,7 +42,6 @@ zh_map = {'low': '低', 'middle': '中', 'high': '高', 'critical':'危急'}
 
 
 def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
-  print("building...")
   vulnerabilities.sort(key=lambda x: num_map[x.severity],reverse=True)
   hashtable_ip2host = {}
   for host in hosts:
@@ -59,8 +58,38 @@ def build_table(vulnerabilities: list, hosts: list, affections: dict, filename="
     record.append("未整改")
     records.append(record)
   records = prefix_id(records)
-  doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2.docx", filename=filename)
-  print("done!")
+  doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2.docx", filename=filename + "-YPG漏洞列表.docx")
+
+def build_table_ypg_mini(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
+  vulnerabilities.sort(key=lambda x: num_map[x.severity],reverse=True)
+  hashtable_ip2host = {}
+  for host in hosts:
+    hashtable_ip2host[host.ip] = host
+  records = []
+  for vul in vulnerabilities:
+    record = []
+    record.append(vul.name)
+    record.append(vul.description)
+    record.append(zh_map[vul.severity])
+    record.append('/')
+    record.append(len(affections[vul.name]))
+    record.append(vul.solution)
+    record.append("未整改")
+    records.append(record)
+  records = prefix_id(records)
+  doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2-mini.docx", filename=filename + "-YPG-MINI漏洞列表.docx")
+
+def build_table_target(hosts, filename):
+  records = []
+  for host in hosts:
+    record = []
+    record.append(host.name)
+    record.append(host.ip)
+    records.append(record)
+  records = prefix_id(records)
+
+  doc_handler.build_doc_tablelike(records=records, template_path="static/template-target.docx", filename=filename + "-YPG目标列表.docx")
+
 
 def build_table_djcp(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
   vulnerabilities.sort(key=lambda x: num_map[x.severity], reverse=True)
@@ -161,42 +190,9 @@ def build_table_djcp_mini(vulnerabilities: list, hosts: list, affections: dict, 
   )
 
 
-def build_table_ypg_mini(vulnerabilities: list, hosts: list, affections: dict, filename="./out.docx"):
-  print("building...")
-  vulnerabilities.sort(key=lambda x: num_map[x.severity],reverse=True)
-  hashtable_ip2host = {}
-  for host in hosts:
-    hashtable_ip2host[host.ip] = host
-  records = []
-  for vul in vulnerabilities:
-    record = []
-    record.append(vul.name)
-    record.append(vul.description)
-    record.append(zh_map[vul.severity])
-    record.append('/')
-    record.append(len(affections[vul.name]))
-    record.append(vul.solution)
-    record.append("未整改")
-    records.append(record)
-  records = prefix_id(records)
-  doc_handler.build_doc_tablelike(records=records, template_path="static/template-vulnlist-v2-mini.docx", filename=filename)
-  print("done!")
-
-
-def build_table_target(hosts, filename):
-  records = []
-  for host in hosts:
-    record = []
-    record.append(host.name)
-    record.append(host.ip)
-    records.append(record)
-  records = prefix_id(records)
-  doc_handler.build_doc_tablelike(records=records, template_path="static/template-target.docx", filename=filename)
 
 def build_port_xlsx(hosts):
   hosts_dict_list = [host.dict() for host in hosts]
-
   df = pd.DataFrame(hosts_dict_list)
-
   excel_path = 'hosts_data.xlsx'
   df.to_excel(excel_path, index=False)

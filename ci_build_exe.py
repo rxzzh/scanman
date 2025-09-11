@@ -150,7 +150,7 @@ def verify_build():
     """验证构建结果"""
     safe_print("Verifying build results...")
     
-    exe_name = "ScanReportGenerator.exe" if os.name == 'nt' else "ScanReportGenerator"
+    exe_name = "scanman.exe" if os.name == 'nt' else "scanman"
     exe_path = Path("dist") / exe_name
     
     if exe_path.exists():

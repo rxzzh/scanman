@@ -48,9 +48,8 @@ class RSASParser(Parser):
     
     # RSAS特征：包含特定的HTML结构
     rsas_patterns = [
-      'id="vul_detail"',
-      'class="solution"',
-      'id="content"'
+      '<h1>绿盟科技&#34;远程安全评估系统&#34;安全评估报告-主机报表</h1>',
+      'media/report/js/nsfocus',
     ]
     
     return all(pattern in text for pattern in rsas_patterns)

@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from scanman.core import Prime, ScannerType, TableType
 import json
+from datetime import datetime
 
 class RuleRow(ttk.Frame):
     FIELD_MAP = {'名称': 'name', '严重程度': 'severity', 'IP': 'ip', '描述': 'description', '解决方法': 'solution'}
@@ -170,7 +171,11 @@ class VulnerabilityScanReportGenerator:
 
         ttk.Label(frame, text="Word格式报告输出路径及前缀").grid(row=4, column=0, sticky="w", padx=5, pady=5)
         self.output_path = ttk.Entry(frame, width=50)
-        self.output_path.insert(0, "./转格式")
+        default_output_path = "./格式转换-__scanman_time_stamp__"
+        if "__scanman_time_stamp__" in default_output_path:
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M-%S")
+            default_output_path = default_output_path.replace("__scanman_time_stamp__", timestamp)
+        self.output_path.insert(0, default_output_path)
         self.output_path.grid(row=4, column=1, padx=5, pady=5)
         ttk.Button(frame, text="浏览", command=lambda: self.browse_file(self.output_path, [("Word Document", "*.docx")], save=True)).grid(row=4, column=2, padx=5, pady=5)
 
